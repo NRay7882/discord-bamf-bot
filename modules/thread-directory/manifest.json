@@ -84,7 +84,7 @@
               "description": "How to order category groups.",
               "required": false,
               "choices": [
-                { "name": "Custom order (see /threads order)", "value": "custom" },
+                { "name": "Custom order (see /bamf threads order)", "value": "custom" },
                 { "name": "Alphabetical", "value": "alpha" },
                 { "name": "Discord's channel order", "value": "position" }
               ]

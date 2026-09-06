@@ -12,7 +12,7 @@
 
 import { Events, ChannelType, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { ConfigStore } from "./store.js";
-import { collectThreads, categoryMetaFor } from "./threads.js";
+import { collectThreads, categoryMetaFor } from "./bamf threads.js";
 import { renderDirectory } from "./render.js";
 
 const DEBOUNCE_MS = 5000;
@@ -234,7 +234,7 @@ async function threadList(interaction) {
       await interaction.editReply("Sent you a DM with the thread list.");
     } catch {
       await interaction.editReply(
-        "I couldn't DM you - check whether DMs from server members are allowed, or run `/threads list` without `deliver:dm`."
+        "I couldn't DM you - check whether DMs from server members are allowed, or run `/bamf threads list` without `deliver:dm`."
       );
     }
     return;
@@ -268,7 +268,7 @@ async function threadsCommand(interaction) {
     !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
   ) {
     await interaction.reply({
-      content: `You need the **Manage Server** permission to use \`/threads ${sub}\`. Any member can use \`/threads list\` and \`/threads help\`.`,
+      content: `You need the **Manage Server** permission to use \`/bamf threads ${sub}\`. Any member can use \`/bamf threads list\` and \`/bamf threads help\`.`,
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -334,7 +334,7 @@ async function setupCommand(interaction, guild) {
   const result = await rebuildGuild(guild.id);
   const detail = result.ok
     ? `Populated ${result.messages} message(s). New, renamed, or closed threads update automatically. Lock the channel so members can only read it.`
-    : `Set up, but the first build reported: ${result.reason}. Check my permissions in the channel, then run \`/threads refresh\`.`;
+    : `Set up, but the first build reported: ${result.reason}. Check my permissions in the channel, then run \`/bamf threads refresh\`.`;
   await interaction.editReply(`Thread directory set up in <#${channel.id}>. ${detail}`);
 }
 
@@ -342,7 +342,7 @@ async function disableCommand(interaction, guild) {
   await store.update(guild.id, { enabled: false });
   enabledGuilds.delete(guild.id);
   await interaction.reply({
-    content: "Stopped maintaining the thread directory. The existing messages are left in place; run `/threads setup` to resume.",
+    content: "Stopped maintaining the thread directory. The existing messages are left in place; run `/bamf threads setup` to resume.",
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -351,7 +351,7 @@ async function refreshCommand(interaction, guild) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const cfg = await store.get(guild.id);
   if (!cfg.enabled || !cfg.channelId) {
-    await interaction.editReply("No directory is set up yet. Run `/threads setup channel:<#channel>` first.");
+    await interaction.editReply("No directory is set up yet. Run `/bamf threads setup channel:<#channel>` first.");
     return;
   }
   const result = await rebuildGuild(guild.id);
@@ -439,7 +439,7 @@ async function excludeCommand(interaction, guild) {
   set.add(channel.id);
   const updated = await store.update(guild.id, { filters: { excludedChannelIds: [...set] } });
   await interaction.reply({
-    content: `Excluded <#${channel.id}> - its threads won't appear in the directory or \`/threads list\`.`,
+    content: `Excluded <#${channel.id}> - its threads won't appear in the directory or \`/bamf threads list\`.`,
     flags: MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
@@ -506,36 +506,36 @@ async function helpCommand(interaction, guild) {
     `The bot keeps ${channelRef} updated automatically with every open thread, grouped by category. The "Updated ..." line shows when it last rebuilt; new, renamed, or closed threads update it within a few seconds.`,
     "",
     "__Set up and control the channel__",
-    "`/threads setup channel:#open-threads` - maintain the list in a channel (builds it now)",
-    "`/threads refresh` - rebuild the channel right now",
-    "`/threads status` - show the current channel and sort settings",
-    "`/threads disable` - stop maintaining it (leaves the messages in place)",
+    "`/bamf threads setup channel:#open-threads` - maintain the list in a channel (builds it now)",
+    "`/bamf threads refresh` - rebuild the channel right now",
+    "`/bamf threads status` - show the current channel and sort settings",
+    "`/bamf threads disable` - stop maintaining it (leaves the messages in place)",
     "",
     "__Change the order of the category headings__",
-    "`/threads order categories:Politics, Fun & Games, Health & Exercise, Movies & TV`",
+    "`/bamf threads order categories:Politics, Fun & Games, Health & Exercise, Movies & TV`",
     " - lists categories in exactly that order (and switches ordering to custom)",
-    "`/threads sort categories:custom` - use the custom order you set above",
-    "`/threads sort categories:alpha` - A to Z",
-    "`/threads sort categories:position` - match Discord's own category order",
+    "`/bamf threads sort categories:custom` - use the custom order you set above",
+    "`/bamf threads sort categories:alpha` - A to Z",
+    "`/bamf threads sort categories:position` - match Discord's own category order",
     "",
     "__Change how threads sort under each channel__",
-    "`/threads sort threads:activity` - most recent activity first (default)",
-    "`/threads sort threads:alpha` - A to Z",
-    "`/threads sort threads:created` - newest thread first",
+    "`/bamf threads sort threads:activity` - most recent activity first (default)",
+    "`/bamf threads sort threads:alpha` - A to Z",
+    "`/bamf threads sort threads:created` - newest thread first",
     "",
     "__Filter which threads appear__",
-    "`/threads filter forums:true` - include forum channel posts (hidden by default)",
-    "`/threads filter archived:true` - include closed/archived threads (hidden by default)",
-    "`/threads exclude channel:#a-channel` - stop listing that channel's threads",
-    "`/threads include channel:#a-channel` - list that channel again",
+    "`/bamf threads filter forums:true` - include forum channel posts (hidden by default)",
+    "`/bamf threads filter archived:true` - include closed/archived threads (hidden by default)",
+    "`/bamf threads exclude channel:#a-channel` - stop listing that channel's threads",
+    "`/bamf threads include channel:#a-channel` - list that channel again",
     "",
     "__Private, on-demand list (any member)__",
-    "`/threads list` - all open threads, only you can see it",
-    "`/threads list scope:category` - only this channel's category",
-    "`/threads list scope:channel` - only this channel",
-    "`/threads list deliver:dm` - send it to your DMs instead",
+    "`/bamf threads list` - all open threads, only you can see it",
+    "`/bamf threads list scope:category` - only this channel's category",
+    "`/bamf threads list scope:channel` - only this channel",
+    "`/bamf threads list deliver:dm` - send it to your DMs instead",
     "",
-    "Tip: `/threads order` matches categories by name; any you leave out are added alphabetically after the ones you list. Use `/threads status` to see the current filters and excluded channels.",
+    "Tip: `/bamf threads order` matches categories by name; any you leave out are added alphabetically after the ones you list. Use `/bamf threads status` to see the current filters and excluded channels.",
   ];
 
   await replyChunks(interaction, lines);
@@ -559,7 +559,7 @@ async function sortCommand(interaction, guild) {
   await interaction.reply({
     content: `Sorting updated - categories: **${cfg.sort.categoryOrder}**, threads: **${cfg.sort.threadOrder}**.${
       cfg.sort.categoryOrder === "custom" && cfg.sort.customCategoryOrder.length === 0
-        ? " Set the custom order with `/threads order`."
+        ? " Set the custom order with `/bamf threads order`."
         : ""
     }`,
     flags: MessageFlags.Ephemeral,

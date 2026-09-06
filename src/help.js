@@ -1,15 +1,17 @@
-// Built-in /help command (FR9, section 4.6). Sourced entirely from the Registry,
+// Built-in help command (FR9, section 4.6). Sourced entirely from the Registry,
 // so it always reflects the modules that are actually loaded. Owned by the core,
-// not by any module.
+// not by any module. Exposed as `/bamf help`, alongside every module command.
 
 import { MessageFlags } from "discord.js";
+import { ROOT_COMMAND_NAME } from "./registry.js";
 
-export const HELP_COMMAND_NAME = "help";
+export const HELP_SUBCOMMAND_NAME = "help";
 
-/** The Discord command definition for /help, for the deploy script to register. */
-export function buildHelpCommand() {
+/** The Discord definition for the help subcommand, to nest under `/bamf`. */
+export function buildHelpSubcommand() {
   return {
-    name: HELP_COMMAND_NAME,
+    type: 1, // subcommand
+    name: HELP_SUBCOMMAND_NAME,
     description: "List BamfBot's commands, or show detail for one.",
     options: [
       {
@@ -22,32 +24,72 @@ export function buildHelpCommand() {
   };
 }
 
-function usageLine(command) {
-  const args = (command.options ?? [])
+/** The subcommands a command owns (if any), else null. */
+function subcommandsOf(command) {
+  const subs = (command.options ?? []).filter((o) => o.type === "subcommand");
+  return subs.length > 0 ? subs : null;
+}
+
+function optionArgs(options) {
+  return (options ?? [])
+    .filter((o) => o.type !== "subcommand" && o.type !== "subcommand_group")
     .map((o) => (o.required ? `<${o.name}>` : `[${o.name}]`))
     .join(" ");
-  return args ? `/${command.name} ${args}` : `/${command.name}`;
+}
+
+/** A user-facing invocation path, e.g. `/bamf hello` or `/bamf threads list`. */
+function usageLine(command) {
+  const subs = subcommandsOf(command);
+  if (subs) {
+    return `/${ROOT_COMMAND_NAME} ${command.name} <${subs.map((s) => s.name).join("|")}>`;
+  }
+  const args = optionArgs(command.options);
+  return args
+    ? `/${ROOT_COMMAND_NAME} ${command.name} ${args}`
+    : `/${ROOT_COMMAND_NAME} ${command.name}`;
 }
 
 function renderList(commandMap) {
-  const lines = ["**BamfBot commands**", ""];
+  const lines = ["**BamfBot commands**", "", `All commands live under \`/${ROOT_COMMAND_NAME}\`.`, ""];
   const entries = [...commandMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   for (const [name, { command }] of entries) {
-    lines.push(`- \`/${name}\` - ${command.description}`);
+    const subs = subcommandsOf(command);
+    if (subs) {
+      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}`);
+      for (const sub of subs) {
+        lines.push(`  - \`/${ROOT_COMMAND_NAME} ${name} ${sub.name}\` - ${sub.description}`);
+      }
+    } else {
+      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}`);
+    }
   }
-  lines.push("", "Use `/help command:<name>` for details on one command.");
+  lines.push("", `Use \`/${ROOT_COMMAND_NAME} help command:<name>\` for details on one command.`);
   return lines.join("\n");
 }
 
-function renderDetail(name, entry) {
+function renderDetail(entry) {
   const { module, command } = entry;
   const lines = [
-    `**\`/${command.name}\`** - ${command.description}`,
+    `**\`/${ROOT_COMMAND_NAME} ${command.name}\`** - ${command.description}`,
     "",
     `Usage: \`${usageLine(command)}\``,
     `Module: \`${module.name}\` v${module.version}`,
     `Reply: ${command.ephemeral ? "private (only you see it)" : "public (posted in channel)"}`,
   ];
+
+  const subs = subcommandsOf(command);
+  if (subs) {
+    lines.push("", "Subcommands:");
+    for (const sub of subs) {
+      const args = optionArgs(sub.options);
+      const usage = args
+        ? `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name} ${args}`
+        : `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name}`;
+      lines.push(`- \`${usage}\` - ${sub.description}`);
+    }
+    return lines.join("\n");
+  }
+
   const options = command.options ?? [];
   if (options.length > 0) {
     lines.push("", "Options:");
@@ -61,7 +103,7 @@ function renderDetail(name, entry) {
 }
 
 /**
- * Handle a /help interaction.
+ * Handle a `/bamf help` interaction.
  * @param {import("discord.js").ChatInputCommandInteraction} interaction
  * @param {Map<string, {module: object, command: object}>} commandMap
  */
@@ -70,11 +112,16 @@ export async function handleHelp(interaction, commandMap) {
   let content;
 
   if (requested) {
-    const key = requested.replace(/^\//, "");
+    // Accept "threads", "/threads", "/bamf threads", or "bamf threads".
+    const key = requested
+      .replace(/^\//, "")
+      .replace(new RegExp(`^${ROOT_COMMAND_NAME}\\s+`), "")
+      .trim()
+      .split(/\s+/)[0];
     const entry = commandMap.get(key);
     content = entry
-      ? renderDetail(key, entry)
-      : `No command named \`/${key}\`. Run \`/help\` to see everything available.`;
+      ? renderDetail(entry)
+      : `No command named \`/${ROOT_COMMAND_NAME} ${key}\`. Run \`/${ROOT_COMMAND_NAME} help\` to see everything available.`;
   } else if (commandMap.size === 0) {
     content = "No commands are available yet.";
   } else {
