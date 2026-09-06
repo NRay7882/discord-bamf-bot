@@ -1,13 +1,13 @@
 // Graceful error and unavailable-command handling (FR10, section 4.6).
-// Every user-facing failure path points the user back to /help.
+// Every user-facing failure path points the user back to /bamf help.
 
 import { log } from "./logger.js";
 
 export const UNAVAILABLE_MESSAGE =
-  "That command isn't available right now. Try `/help` to see what's working.";
+  "That command isn't available right now. Try `/bamf help` to see what's working.";
 
 export const GENERIC_ERROR_MESSAGE =
-  "Something went wrong handling that command. Try again, or run `/help`.";
+  "Something went wrong handling that command. Try again, or run `/bamf help`.";
 
 /**
  * Reply (or edit a deferred reply) safely, ephemerally, without throwing.

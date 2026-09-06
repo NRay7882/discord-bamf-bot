@@ -12,7 +12,7 @@
 
 import { Events, ChannelType, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { ConfigStore } from "./store.js";
-import { collectThreads, categoryMetaFor } from "./bamf threads.js";
+import { collectThreads, categoryMetaFor } from "./threads.js";
 import { renderDirectory } from "./render.js";
 
 const DEBOUNCE_MS = 5000;
