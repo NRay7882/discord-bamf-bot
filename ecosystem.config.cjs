@@ -1,5 +1,11 @@
 // PM2 process config for running BamfBot full-time (see docs/HOSTING.md).
-// Runs the core and each module as separate, auto-restarting processes.
+// Runs the core and each HTTP module as separate, auto-restarting processes.
+//
+// Only HTTP modules (manifest has `runtime.invokeUrl`) get their own entry here,
+// like bamf-hello-world. In-process modules (manifest has
+// `transport: "in-process"`, e.g. thread-directory) run inside bamf-core and are
+// loaded by src/inprocess.js at boot, so they have no process of their own -
+// don't add a PM2 entry for them; they start and restart with bamf-core.
 //
 //   pm2 start ecosystem.config.cjs
 //   pm2 logs            # tail output
