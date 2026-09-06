@@ -7,6 +7,10 @@
 //
 // The core reads its secrets from a local .env file (gitignored); no external
 // tooling is required for unattended restarts.
+//
+// `pmx: false` disables PM2's built-in pm2.io instrumentation, which throws
+// EPIPE on Windows with recent Node and crash-loops the process. We don't use
+// pm2.io monitoring, so we turn it off.
 
 module.exports = {
   apps: [
@@ -17,6 +21,7 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
+      pmx: false,
       // The core loads .env itself (see src/config.js) and holds the Discord
       // connection.
     },
@@ -28,11 +33,12 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
+      pmx: false,
       env: {
         PORT: "8081",
       },
-      // Modules hold no Discord secrets, so they don't need op. Add
-      // BAMF_SHARED_SECRET here (and to the core's env) once you enable it.
+      // Modules hold no Discord secrets. Add BAMF_SHARED_SECRET here (and to the
+      // core's env) once you enable it.
     },
   ],
 };
