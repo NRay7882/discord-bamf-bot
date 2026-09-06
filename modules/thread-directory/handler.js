@@ -141,9 +141,7 @@ async function doRebuild(guildId) {
     return { ok: false, reason: "missing-permissions" };
   }
 
-  const { records, categoryMeta } = await collectThreads(guild, {
-    includeArchived: cfg.sort.includeArchived,
-  });
+  const { records, categoryMeta } = await collectThreads(guild, cfg.filters);
   const contents = renderDirectory(records, {
     categoryMeta,
     sort: cfg.sort,
@@ -209,9 +207,7 @@ async function threadList(interaction) {
   const deliver = interaction.options.getString("deliver") ?? "here";
   const cfg = await store.get(guild.id);
 
-  const { records, categoryMeta } = await collectThreads(guild, {
-    includeArchived: cfg.sort.includeArchived,
-  });
+  const { records, categoryMeta } = await collectThreads(guild, cfg.filters);
 
   let filtered = records;
   if (scope === "channel") {
@@ -269,10 +265,18 @@ async function threadsAdmin(interaction) {
       return refreshCommand(interaction, guild);
     case "status":
       return statusCommand(interaction, guild);
+    case "help":
+      return helpCommand(interaction, guild);
     case "sort":
       return sortCommand(interaction, guild);
     case "order":
       return orderCommand(interaction, guild);
+    case "filter":
+      return filterCommand(interaction, guild);
+    case "exclude":
+      return excludeCommand(interaction, guild);
+    case "include":
+      return includeCommand(interaction, guild);
     default:
       return interaction.reply({ content: "Unknown subcommand.", flags: MessageFlags.Ephemeral });
   }
@@ -353,7 +357,13 @@ async function statusCommand(interaction, guild) {
     `Category order: ${cfg.sort.categoryOrder}`,
     `Custom order: ${orderNames}`,
     `Thread order: ${cfg.sort.threadOrder}`,
-    `Include archived: ${cfg.sort.includeArchived ? "yes" : "no"}`,
+    `Include archived: ${cfg.filters.includeArchived ? "yes" : "no"}`,
+    `Include forum channels: ${cfg.filters.includeForums ? "yes" : "no"}`,
+    `Excluded channels: ${
+      cfg.filters.excludedChannelIds.length
+        ? cfg.filters.excludedChannelIds.map((id) => `<#${id}>`).join(", ")
+        : "(none)"
+    }`,
     `Managed messages: ${cfg.managedMessageIds.length}`,
     `Last updated: ${cfg.updatedAt ? `<t:${Math.floor(cfg.updatedAt / 1000)}:R>` : "never"}`,
   ];
@@ -362,6 +372,153 @@ async function statusCommand(interaction, guild) {
     flags: MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
+}
+
+async function filterCommand(interaction, guild) {
+  const archived = interaction.options.getBoolean("archived");
+  const forums = interaction.options.getBoolean("forums");
+
+  const summarize = (f) =>
+    `archived threads: **${f.includeArchived ? "included" : "hidden"}**, forum channels: **${
+      f.includeForums ? "included" : "hidden"
+    }**`;
+
+  if (archived === null && forums === null) {
+    const cfg = await store.get(guild.id);
+    await interaction.reply({
+      content: `Current filters - ${summarize(cfg.filters)}. Pass \`archived\` and/or \`forums\` to change them.`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const patch = {};
+  if (archived !== null) patch.includeArchived = archived;
+  if (forums !== null) patch.includeForums = forums;
+  const cfg = await store.update(guild.id, { filters: patch });
+
+  await interaction.reply({
+    content: `Filters updated - ${summarize(cfg.filters)}.`,
+    flags: MessageFlags.Ephemeral,
+  });
+  if (cfg.enabled) await rebuildGuild(guild.id);
+}
+
+async function excludeCommand(interaction, guild) {
+  const channel = interaction.options.getChannel("channel");
+  const cfg = await store.get(guild.id);
+  const set = new Set(cfg.filters.excludedChannelIds);
+  if (set.has(channel.id)) {
+    await interaction.reply({
+      content: `<#${channel.id}> is already excluded.`,
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+  set.add(channel.id);
+  const updated = await store.update(guild.id, { filters: { excludedChannelIds: [...set] } });
+  await interaction.reply({
+    content: `Excluded <#${channel.id}> - its threads won't appear in the directory or \`/thread-list\`.`,
+    flags: MessageFlags.Ephemeral,
+    allowedMentions: { parse: [] },
+  });
+  if (updated.enabled) await rebuildGuild(guild.id);
+}
+
+async function includeCommand(interaction, guild) {
+  const channel = interaction.options.getChannel("channel");
+  const cfg = await store.get(guild.id);
+  const set = new Set(cfg.filters.excludedChannelIds);
+  if (!set.has(channel.id)) {
+    await interaction.reply({
+      content: `<#${channel.id}> is not on the excluded list.`,
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+  set.delete(channel.id);
+  const updated = await store.update(guild.id, { filters: { excludedChannelIds: [...set] } });
+  await interaction.reply({
+    content: `<#${channel.id}> will be listed again.`,
+    flags: MessageFlags.Ephemeral,
+    allowedMentions: { parse: [] },
+  });
+  if (updated.enabled) await rebuildGuild(guild.id);
+}
+
+/** Send one or more ephemeral messages, packing lines under Discord's limit. */
+async function replyChunks(interaction, lines, limit = 1900) {
+  const messages = [];
+  let current = "";
+  for (const line of lines) {
+    if (current && current.length + 1 + line.length > limit) {
+      messages.push(current);
+      current = line;
+    } else {
+      current = current ? `${current}\n${line}` : line;
+    }
+  }
+  if (current) messages.push(current);
+
+  await interaction.reply({
+    content: messages[0],
+    flags: MessageFlags.Ephemeral,
+    allowedMentions: { parse: [] },
+  });
+  for (let i = 1; i < messages.length; i++) {
+    await interaction.followUp({
+      content: messages[i],
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] },
+    });
+  }
+}
+
+async function helpCommand(interaction, guild) {
+  const cfg = await store.get(guild.id);
+  const channelRef = cfg.channelId ? `<#${cfg.channelId}>` : "a channel you pick";
+
+  const lines = [
+    "**Thread directory - command guide**",
+    "",
+    `The bot keeps ${channelRef} updated automatically with every open thread, grouped by category. The "Updated ..." line shows when it last rebuilt; new, renamed, or closed threads update it within a few seconds.`,
+    "",
+    "__Set up and control the channel__",
+    "`/threads setup channel:#open-threads` - maintain the list in a channel (builds it now)",
+    "`/threads refresh` - rebuild the channel right now",
+    "`/threads status` - show the current channel and sort settings",
+    "`/threads disable` - stop maintaining it (leaves the messages in place)",
+    "",
+    "__Change the order of the category headings__",
+    "`/threads order categories:Politics, Fun & Games, Health & Exercise, Movies & TV`",
+    " - lists categories in exactly that order (and switches ordering to custom)",
+    "`/threads sort categories:custom` - use the custom order you set above",
+    "`/threads sort categories:alpha` - A to Z",
+    "`/threads sort categories:position` - match Discord's own category order",
+    "",
+    "__Change how threads sort under each channel__",
+    "`/threads sort threads:activity` - most recent activity first (default)",
+    "`/threads sort threads:alpha` - A to Z",
+    "`/threads sort threads:created` - newest thread first",
+    "",
+    "__Filter which threads appear__",
+    "`/threads filter forums:true` - include forum channel posts (hidden by default)",
+    "`/threads filter archived:true` - include closed/archived threads (hidden by default)",
+    "`/threads exclude channel:#a-channel` - stop listing that channel's threads",
+    "`/threads include channel:#a-channel` - list that channel again",
+    "",
+    "__Private, on-demand list (any member)__",
+    "`/thread-list` - all open threads, only you can see it",
+    "`/thread-list scope:category` - only this channel's category",
+    "`/thread-list scope:channel` - only this channel",
+    "`/thread-list deliver:dm` - send it to your DMs instead",
+    "",
+    "Tip: `/threads order` matches categories by name; any you leave out are added alphabetically after the ones you list. Use `/threads status` to see the current filters and excluded channels.",
+  ];
+
+  await replyChunks(interaction, lines);
 }
 
 async function sortCommand(interaction, guild) {

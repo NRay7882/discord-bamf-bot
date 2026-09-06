@@ -16,15 +16,32 @@ export const DEFAULT_SORT = {
   categoryOrder: "position", // "position" | "alpha" | "custom"
   customCategoryOrder: [], // category IDs, used when categoryOrder === "custom"
   threadOrder: "activity", // "activity" | "alpha" | "created"
-  includeArchived: false,
+};
+
+export const DEFAULT_FILTERS = {
+  includeArchived: false, // closed/archived threads are hidden by default
+  includeForums: false, // forum (and media) channel posts are hidden by default
+  excludedChannelIds: [], // parent channels whose threads are never listed
 };
 
 /** Fill in any missing fields so callers always get a complete config. */
 export function withDefaults(config = {}) {
+  const legacySort = config.sort ?? {};
+  const filters = { ...DEFAULT_FILTERS, ...(config.filters ?? {}) };
+  // Migrate the old sort.includeArchived location into filters.
+  if (config.filters?.includeArchived === undefined && legacySort.includeArchived !== undefined) {
+    filters.includeArchived = legacySort.includeArchived;
+  }
+  if (!Array.isArray(filters.excludedChannelIds)) filters.excludedChannelIds = [];
+
+  const sort = { ...DEFAULT_SORT, ...(config.sort ?? {}) };
+  delete sort.includeArchived; // no longer stored under sort
+
   return {
     channelId: config.channelId ?? null,
     enabled: config.enabled ?? false,
-    sort: { ...DEFAULT_SORT, ...(config.sort ?? {}) },
+    sort,
+    filters,
     managedMessageIds: Array.isArray(config.managedMessageIds) ? config.managedMessageIds : [],
     updatedAt: config.updatedAt ?? null,
   };
@@ -61,6 +78,7 @@ export class ConfigStore {
       ...current,
       ...patch,
       sort: { ...current.sort, ...(patch.sort ?? {}) },
+      filters: { ...current.filters, ...(patch.filters ?? {}) },
       updatedAt: Date.now(),
     });
     await this.#ensureDir();

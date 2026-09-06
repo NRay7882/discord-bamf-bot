@@ -7,6 +7,13 @@
 
 import { ChannelType, SnowflakeUtil } from "discord.js";
 
+// Forum and media channels hold "posts" that are threads; treat both as forums
+// for the exclude-forums filter.
+const MEDIA_CHANNEL = ChannelType.GuildMedia ?? 16;
+function isForumParent(channel) {
+  return !!channel && (channel.type === ChannelType.GuildForum || channel.type === MEDIA_CHANNEL);
+}
+
 /** Best-effort "last activity" for a thread: its last message, else creation. */
 function lastActivityOf(thread) {
   if (thread.lastMessageId) {
@@ -32,7 +39,24 @@ function recordFor(thread, guild) {
     categoryName: category?.name ?? null,
     lastActivity: lastActivityOf(thread),
     createdAt: thread.createdTimestamp ?? 0,
+    isForum: isForumParent(parent),
+    archived: Boolean(thread.archived),
   };
+}
+
+/**
+ * Apply the include/exclude filters to a set of records. Pure (records already
+ * carry `isForum` and `archived`), so it is unit-testable without a client.
+ */
+export function filterRecords(records, filters = {}) {
+  const { includeArchived = false, includeForums = false, excludedChannelIds = [] } = filters;
+  const excluded = new Set(excludedChannelIds);
+  return records.filter((r) => {
+    if (!includeForums && r.isForum) return false;
+    if (excluded.has(r.parentChannelId)) return false;
+    if (!includeArchived && r.archived) return false;
+    return true;
+  });
 }
 
 /** Map of category id -> { name, position } for every category in the guild. */
@@ -47,12 +71,14 @@ export function categoryMetaFor(guild) {
 }
 
 /**
- * Collect thread records for a guild.
+ * Collect thread records for a guild, honoring the include/exclude filters.
  * @param {import("discord.js").Guild} guild
- * @param {{ includeArchived?: boolean }} opts
+ * @param {{ includeArchived?: boolean, includeForums?: boolean, excludedChannelIds?: string[] }} filters
  * @returns {Promise<{ records: object[], categoryMeta: Record<string, object> }>}
  */
-export async function collectThreads(guild, { includeArchived = false } = {}) {
+export async function collectThreads(guild, filters = {}) {
+  const { includeArchived = false, includeForums = false, excludedChannelIds = [] } = filters;
+  const excluded = new Set(excludedChannelIds);
   const byId = new Map();
 
   const active = await guild.channels.fetchActiveThreads();
@@ -62,10 +88,14 @@ export async function collectThreads(guild, { includeArchived = false } = {}) {
 
   if (includeArchived) {
     // Archived public threads must be fetched per parent channel. This is more
-    // rate-limit intensive, so it is opt-in.
-    const parents = guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildText || c.type === ChannelType.GuildForum
-    );
+    // rate-limit intensive, so it is opt-in - and we skip channels we would only
+    // filter back out (excluded ones, and forums unless forums are included).
+    const parents = guild.channels.cache.filter((c) => {
+      if (excluded.has(c.id)) return false;
+      if (c.type === ChannelType.GuildText) return true;
+      if (isForumParent(c)) return includeForums;
+      return false;
+    });
     for (const channel of parents.values()) {
       try {
         const archived = await channel.threads.fetchArchived({ type: "public", limit: 100 });
@@ -78,5 +108,6 @@ export async function collectThreads(guild, { includeArchived = false } = {}) {
     }
   }
 
-  return { records: [...byId.values()], categoryMeta: categoryMetaFor(guild) };
+  const records = filterRecords([...byId.values()], { includeArchived, includeForums, excludedChannelIds });
+  return { records, categoryMeta: categoryMetaFor(guild) };
 }
