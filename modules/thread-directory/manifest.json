@@ -115,6 +115,51 @@
               "required": true
             }
           ]
+        },
+        {
+          "type": "subcommand",
+          "name": "filter",
+          "description": "Include or hide archived threads and forum-channel posts.",
+          "options": [
+            {
+              "type": "boolean",
+              "name": "archived",
+              "description": "Include closed/archived threads (hidden by default).",
+              "required": false
+            },
+            {
+              "type": "boolean",
+              "name": "forums",
+              "description": "Include threads from forum channels (hidden by default).",
+              "required": false
+            }
+          ]
+        },
+        {
+          "type": "subcommand",
+          "name": "exclude",
+          "description": "Stop listing a channel's threads in the directory.",
+          "options": [
+            {
+              "type": "channel",
+              "name": "channel",
+              "description": "Channel whose threads should be hidden from the list.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "type": "subcommand",
+          "name": "include",
+          "description": "List a previously excluded channel's threads again.",
+          "options": [
+            {
+              "type": "channel",
+              "name": "channel",
+              "description": "Channel to add back to the list.",
+              "required": true
+            }
+          ]
         }
       ]
     }

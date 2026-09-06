@@ -28,6 +28,15 @@ Privately returns the grouped thread list.
 - `sort categories:<custom|alpha|position> threads:<activity|alpha|created>` - ordering.
 - `order categories:"Politics, Fun & Games, Health & Exercise, Movies & TV"` - set a custom
   category order by name (also switches category ordering to `custom`).
+- `filter archived:<bool> forums:<bool>` - include or hide archived threads and forum-channel
+  posts. Both are hidden by default; pass either option to change it, or run with no options to
+  see the current filters.
+- `exclude channel:<#channel>` / `include channel:<#channel>` - stop or resume listing a
+  specific channel's threads.
+
+By default the list shows only **open, non-forum** threads. Forum and media channel posts and
+closed/archived threads are hidden until you opt in with `/threads filter`, and any channel you
+`exclude` is dropped from both the maintained channel and `/thread-list`.
 
 ## How the maintained channel works
 
