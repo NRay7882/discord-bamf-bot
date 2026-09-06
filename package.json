@@ -4,7 +4,7 @@
   "description": "A modular, community-extensible Discord bot. The core routes slash commands to self-contained modules over HTTP + JSON.",
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node src/index.js",
