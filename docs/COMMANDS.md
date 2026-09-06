@@ -7,6 +7,8 @@
 |---------|-------------|-------|--------|
 | `/help [command]` | List BamfBot's commands, or show detail for one. | private | _core_ |
 | `/hello` | Get a friendly hello world | public | `hello-world` |
+| `/thread-list [scope] [deliver]` | Privately get a grouped list of the server's open threads. | private | `thread-directory` |
+| `/threads [setup] [disable] [refresh] [status] [sort] [order]` | Admin: set up and tune the maintained thread directory channel. | private | `thread-directory` |
 
 ## Modules
 
@@ -16,5 +18,13 @@ Replies with 'hello world'.
 
 - Language: javascript
 - Bot permissions: none
+- Gateway intents: none
+
+### `thread-directory` v0.1.0
+
+Maintains a live, grouped list of a server's threads and hands it to members on demand.
+
+- Language: javascript
+- Bot permissions: ViewChannel, SendMessages, ManageMessages, ReadMessageHistory, ManageThreads
 - Gateway intents: none
 

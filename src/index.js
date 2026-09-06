@@ -4,14 +4,20 @@
 // Secrets are read from a local .env file (see .env.example and src/config.js):
 //   node src/index.js        (or: npm start)
 
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { Client, Events } from "discord.js";
-import { secrets } from "./config.js";
+import { secrets, config } from "./config.js";
 import { log } from "./logger.js";
 import { loadRegistry } from "./registry.js";
+import { loadInProcessModules } from "./inprocess.js";
 import { resolvePrivileges } from "./permissions.js";
 import { handleCommand } from "./router.js";
 import { handleHelp, HELP_COMMAND_NAME } from "./help.js";
 import { installGlobalGuards, safeRespond, GENERIC_ERROR_MESSAGE } from "./errors.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = join(__dirname, "..", "data");
 
 async function main() {
   installGlobalGuards();
@@ -27,8 +33,18 @@ async function main() {
 
   const client = new Client({ intents: privileges.intentBits });
 
-  client.once(Events.ClientReady, (ready) => {
+  // In-process (first-party) module command handlers, keyed by command name.
+  // Built once the client is ready so handlers can enumerate cached guilds and
+  // start background work; empty until then.
+  let inProcessCommands = new Map();
+
+  client.once(Events.ClientReady, async (ready) => {
     log.info("Core is online", { tag: ready.user.tag, id: ready.user.id });
+    inProcessCommands = await loadInProcessModules(modules, {
+      client,
+      config,
+      dataDir: DATA_DIR,
+    });
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -36,6 +52,11 @@ async function main() {
     try {
       if (interaction.commandName === HELP_COMMAND_NAME) {
         await handleHelp(interaction, commandMap);
+        return;
+      }
+      const inProcess = inProcessCommands.get(interaction.commandName);
+      if (inProcess) {
+        await inProcess(interaction);
         return;
       }
       await handleCommand(interaction, commandMap);
