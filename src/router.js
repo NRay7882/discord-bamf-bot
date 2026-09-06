@@ -39,7 +39,39 @@ async function callModule(module, requestPayload, requestId) {
 }
 
 /**
- * Handle one chat-input (slash) command interaction.
+ * Resolve which module command a `/bamf ...` interaction targets.
+ *   /bamf hello         -> group null, sub "hello"  -> command "hello", subcommand null
+ *   /bamf threads list  -> group "threads", sub "list" -> command "threads", subcommand "list"
+ * A module command exposed as a subcommand group carries the leaf as its
+ * subcommand; one exposed as a plain subcommand has no module-level subcommand.
+ */
+function resolveTarget(interaction) {
+  const group = interaction.options?.getSubcommandGroup?.(false) ?? null;
+  const leaf = interaction.options?.getSubcommand?.(false) ?? null;
+  return {
+    commandName: group ?? leaf,
+    subcommand: group ? leaf : null,
+  };
+}
+
+/** Flatten the invoked options, descending past the subcommand group/subcommand
+ * wrappers so a module receives only its own named options. */
+function collectOptions(interaction) {
+  let data = interaction.options?.data ?? [];
+  // Descend through a subcommand group, then a subcommand, to the real options.
+  while (data.length === 1 && (data[0].type === 1 || data[0].type === 2) && data[0].options) {
+    data = data[0].options;
+  }
+  const options = {};
+  for (const option of data) {
+    if (option.type === 1 || option.type === 2) continue; // container, not a value
+    options[option.name] = option.value;
+  }
+  return options;
+}
+
+/**
+ * Handle one chat-input (slash) command interaction under `/bamf`.
  * @param {import("discord.js").ChatInputCommandInteraction} interaction
  * @param {Map<string, {module: object, command: object}>} commandMap
  */
@@ -47,11 +79,13 @@ export async function handleCommand(interaction, commandMap) {
   const requestId = randomUUID();
   interaction.__requestId = requestId;
 
-  const entry = commandMap.get(interaction.commandName);
+  const target = resolveTarget(interaction);
+  const entry = target.commandName ? commandMap.get(target.commandName) : null;
   if (!entry) {
     log.warn("Command has no owning module", {
       requestId,
       command: interaction.commandName,
+      subcommand: target.commandName,
     });
     await safeRespond(interaction, UNAVAILABLE_MESSAGE);
     return;
@@ -84,14 +118,11 @@ export async function handleCommand(interaction, commandMap) {
   }
 
   // Build the request the module contract expects (section 4.3).
-  const options = {};
-  for (const option of interaction.options?.data ?? []) {
-    options[option.name] = option.value;
-  }
+  const options = collectOptions(interaction);
   const requestPayload = {
     requestId,
     command: command.name,
-    subcommand: interaction.options?.getSubcommand?.(false) ?? null,
+    subcommand: target.subcommand,
     options,
     invoker: {
       id: interaction.user.id,

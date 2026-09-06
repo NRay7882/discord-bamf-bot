@@ -12,6 +12,13 @@ import { log } from "./logger.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_MODULES_DIR = join(__dirname, "..", "modules");
 
+// Every command in the bot is exposed as a child of a single top-level slash
+// command, so users type `/bamf hello`, `/bamf threads list`, etc. instead of a
+// separate `/command` per module. Command names that would collide with the
+// core's own children are reserved.
+export const ROOT_COMMAND_NAME = "bamf";
+const RESERVED_COMMAND_NAMES = new Set(["help"]);
+
 // Discord application command option type numbers.
 const OPTION_TYPES = {
   subcommand: 1,
@@ -53,10 +60,32 @@ function validateManifest(manifest, source) {
     if (typeof command.name !== "string" || !/^[\w-]{1,32}$/.test(command.name)) {
       fail(name, `command name "${command.name}" is invalid (1-32 chars, word/hyphen)`);
     }
+    if (RESERVED_COMMAND_NAMES.has(command.name)) {
+      fail(name, `command name "${command.name}" is reserved by the core (it owns /${ROOT_COMMAND_NAME} ${command.name})`);
+    }
     if (typeof command.description !== "string" || command.description.length === 0) {
       fail(name, `command "${command.name}" needs a non-empty description`);
     }
+    // Still validate defaultMemberPermissions (catch bad permission names early),
+    // even though it is no longer applied to a top-level command - see
+    // toBamfSubcommand for why.
+    try {
+      resolveMemberPermissions(command.defaultMemberPermissions);
+    } catch (error) {
+      fail(name, `command "${command.name}": ${error.message}`);
+    }
+    // Rolling every command under /bamf spends one nesting level, so a command
+    // may hold subcommands but not subcommand groups (Discord allows at most
+    // /bamf <group> <subcommand>). Reject the too-deep shape here with a clear
+    // message rather than letting Discord reject the whole deploy.
     for (const option of command.options ?? []) {
+      if (option.type === "subcommand_group") {
+        fail(
+          name,
+          `command "${command.name}" uses a subcommand group, which cannot roll up under ` +
+            `/${ROOT_COMMAND_NAME} (max depth is /${ROOT_COMMAND_NAME} <command> <subcommand>). Flatten it to subcommands.`
+        );
+      }
       validateOption(name, command, option);
     }
   }
@@ -116,16 +145,39 @@ function buildOption(option) {
   return built;
 }
 
-/** Convert one manifest command into the JSON Discord expects for registration. */
-export function toDiscordCommand(command) {
-  const options = (command.options ?? []).map(buildOption);
+/**
+ * Convert one manifest command into a child of the top-level `/bamf` command:
+ *   - a command whose options are subcommands -> a subcommand *group*
+ *     (`/bamf threads list`)
+ *   - any other command -> a plain subcommand, carrying its own options
+ *     (`/bamf hello`, `/bamf roll <sides>`)
+ *
+ * Note: Discord only supports `default_member_permissions` on the top-level
+ * command, so a module's `defaultMemberPermissions` cannot gate an individual
+ * `/bamf <command>`. Modules that need to restrict a command must enforce it in
+ * their handler (see thread-directory), and `/help` still reflects the intended
+ * visibility.
+ */
+export function toBamfSubcommand(command) {
+  const options = command.options ?? [];
+  const hasSubcommands = options.some((o) => o.type === "subcommand");
+
+  if (hasSubcommands) {
+    return {
+      type: OPTION_TYPES.subcommand_group,
+      name: command.name,
+      description: command.description,
+      options: options.map(buildOption),
+    };
+  }
 
   const built = {
+    type: OPTION_TYPES.subcommand,
     name: command.name,
     description: command.description,
-    default_member_permissions: resolveMemberPermissions(command.defaultMemberPermissions),
   };
-  if (options.length > 0) built.options = options;
+  const built_options = options.map(buildOption);
+  if (built_options.length > 0) built.options = built_options;
   return built;
 }
 

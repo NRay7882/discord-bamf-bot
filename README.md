@@ -17,8 +17,12 @@ returns a response, and the bot delivers it to Discord - publicly in the
 channel, or privately to the person who ran the command.
 
 ```
-/hello -> Discord -> Core (router) -> module (HTTP) -> "hello world" -> Discord -> you
+/bamf hello -> Discord -> Core (router) -> module (HTTP) -> "hello world" -> Discord -> you
 ```
+
+Every command the bot offers is a subcommand of a single `/bamf` command:
+`/bamf hello`, `/bamf threads list`, `/bamf help`. Modules still declare their
+commands normally (see the spec); the core composes them all under `/bamf`.
 
 - **Core** (this repo, JavaScript / [discord.js](https://discord.js.org/)) is the
   only part that talks to Discord. It's a router.
@@ -85,8 +89,8 @@ npm run module:hello
 npm start
 ```
 
-Then type **`/hello`** in your server - the bot replies "hello world". Try
-**`/help`** to see all commands.
+Then type **`/bamf hello`** in your server - the bot replies "hello world". Try
+**`/bamf help`** to see all commands.
 
 > Guild-scoped commands appear instantly. `npm run deploy:global` registers
 > globally for release (can take ~1 hour to propagate).

@@ -145,7 +145,15 @@ Set `defaultMemberPermissions` in the manifest to restrict a command:
 ```json
 { "name": "purge", "description": "Admin only", "defaultMemberPermissions": ["ManageMessages"] }
 ```
-Server admins can further adjust command access in Discord's UI.
+
+> **Heads up:** every command is rolled up under a single `/bamf` command, and
+> Discord only applies `defaultMemberPermissions` to a top-level command. So this
+> field drives `/bamf help` and the docs, but it no longer gates an individual
+> `/bamf <command>` at the Discord level. If a command must be restricted, check
+> the caller's permissions inside your handler (in-process modules have the live
+> interaction; see thread-directory's Manage-Server check). HTTP modules receive
+> the invoker in the `/invoke` request but cannot see their guild permissions, so
+> a hard restriction needs an in-process module.
 
 ---
 

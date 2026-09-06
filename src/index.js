@@ -9,11 +9,11 @@ import { dirname, join } from "node:path";
 import { Client, Events } from "discord.js";
 import { secrets, config } from "./config.js";
 import { log } from "./logger.js";
-import { loadRegistry } from "./registry.js";
+import { loadRegistry, ROOT_COMMAND_NAME } from "./registry.js";
 import { loadInProcessModules } from "./inprocess.js";
 import { resolvePrivileges } from "./permissions.js";
 import { handleCommand } from "./router.js";
-import { handleHelp, HELP_COMMAND_NAME } from "./help.js";
+import { handleHelp, HELP_SUBCOMMAND_NAME } from "./help.js";
 import { installGlobalGuards, safeRespond, GENERIC_ERROR_MESSAGE } from "./errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -49,12 +49,21 @@ async function main() {
 
   client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
+    // Every command is a child of the single `/bamf` command; ignore anything
+    // else (e.g. a stale command left over from a previous deploy).
+    if (interaction.commandName !== ROOT_COMMAND_NAME) return;
     try {
-      if (interaction.commandName === HELP_COMMAND_NAME) {
+      const group = interaction.options.getSubcommandGroup(false);
+      const leaf = interaction.options.getSubcommand(false);
+      // A module command exposed as a subcommand group has group set; one exposed
+      // as a plain subcommand has only leaf. The owning command name is group ?? leaf.
+      const commandName = group ?? leaf;
+
+      if (!group && leaf === HELP_SUBCOMMAND_NAME) {
         await handleHelp(interaction, commandMap);
         return;
       }
-      const inProcess = inProcessCommands.get(interaction.commandName);
+      const inProcess = inProcessCommands.get(commandName);
       if (inProcess) {
         await inProcess(interaction);
         return;

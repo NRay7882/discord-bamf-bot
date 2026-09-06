@@ -25,6 +25,30 @@ The directory name, the `name` in the manifest, and each command name must be
 unique across the whole repo. The core refuses to start if two modules claim the
 same command.
 
+### Everything is a subcommand of `/bamf`
+
+You declare commands normally, but the core does **not** register them as
+top-level slash commands. It rolls every module's commands up under a single
+`/bamf` command, so users type `/bamf <your-command>`:
+
+- A command with no subcommands (like `hello`) becomes `/bamf hello`. Its
+  options ride along: `/bamf roll <sides>`.
+- A command whose options are subcommands (like `threads`) becomes a subcommand
+  group: `/bamf threads list`, `/bamf threads setup`, and so on.
+
+This is transparent to your module - the `/invoke` request still reports your
+`command` and `subcommand` names exactly as before. Two consequences to know:
+
+- **Nesting depth.** Discord allows at most `/bamf <command> <subcommand>`. Your
+  command may hold subcommands, but not subcommand *groups* (that would be a
+  fourth level). The core rejects a too-deep manifest at load with a clear error.
+- **`help` is reserved** by the core (it owns `/bamf help`).
+- **Per-command permission gating.** Discord only supports
+  `defaultMemberPermissions` on a top-level command, and there is now just one
+  (`/bamf`). The field still drives `/bamf help` and the docs, but it no longer
+  gates an individual command at the Discord level - enforce any restriction
+  inside your handler (see thread-directory's Manage-Server check).
+
 ---
 
 ## 2. The manifest (`manifest.json`)
