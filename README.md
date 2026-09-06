@@ -42,10 +42,8 @@ channel, or privately to the person who ran the command.
 ## Prerequisites
 
 - **Node.js 24+** (developed on 26) and npm.
-- **[1Password CLI](https://developer.1password.com/docs/cli/) (`op`)** - secrets
-  are injected at runtime and never written to disk.
-- A **Discord application** (bot) and a server to test in. Store its credentials
-  (token, application ID, test server ID) in a 1Password item of your choosing.
+- A **Discord application** (bot) and a server to test in. You'll put its
+  credentials (token, application ID, test server ID) in a local `.env` file.
 
 ## Setup
 
@@ -55,36 +53,36 @@ git clone https://github.com/NRay7882/discord-bamf-bot.git
 cd discord-bamf-bot
 npm install
 
-# 2. Create your local env (op:// references only - no real secrets)
+# 2. Create your local env and fill in real values
 cp .env.example .env      # Windows: copy .env.example .env
 ```
 
-`.env` holds 1Password secret references (no real secrets). Point each one at
-your own item using the form `op://<vault>/<item>/<field>` (add a `<section>`
-segment if your fields live in a section):
+`.env` holds your real credentials and is **gitignored** - it is never
+committed. Fill in the three values:
 
 ```
-DISCORD_TOKEN=op://<vault>/<item>/<token-field>
-DISCORD_CLIENT_ID=op://<vault>/<item>/<application-id-field>
-DISCORD_GUILD_ID=op://<vault>/<item>/<server-id-field>
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_ID=your-application-id
+DISCORD_GUILD_ID=your-test-server-id
 ```
 
-`op run` resolves these at runtime, so the real values never touch disk.
+The app loads `.env` automatically at startup, so plain `node` / `npm` commands
+pick it up. (Anything already set in the environment wins over the file, so a
+secret manager can supply the values instead if you prefer.)
 
 ## Run it (local dev)
 
 You need three things: register the commands, start the module, start the core.
-Anything touching Discord runs through `op run` so secrets are injected live.
 
 ```bash
 # 1. Register slash commands to your test server (instant, guild-scoped)
-op run --env-file=.env -- npm run deploy
+npm run deploy
 
 # 2. Start the hello-world module (new terminal) - listens on :8081
 npm run module:hello
 
 # 3. Start the core (new terminal)
-op run --env-file=.env -- npm start
+npm start
 ```
 
 Then type **`/hello`** in your server - the bot replies "hello world". Try
@@ -109,7 +107,7 @@ npm test hello-world     # one module
 1. Copy `templates/module-template/` to `modules/<your-module>/`.
 2. Edit `manifest.json`, implement `invoke()`, pick a unique port.
 3. `npm test <your-module>` until green.
-4. `op run --env-file=.env -- npm run deploy` and try it in Discord.
+4. `npm run deploy` and try it in Discord.
 5. `npm run docs` to refresh `docs/COMMANDS.md`, then open a PR.
 
 Full details in **[MODULE_SPEC.md](./MODULE_SPEC.md)** and
@@ -119,18 +117,18 @@ Full details in **[MODULE_SPEC.md](./MODULE_SPEC.md)** and
 
 | Command | What it does |
 |---------|--------------|
-| `npm start` | Run the core (wrap in `op run`). |
+| `npm start` | Run the core. |
 | `npm run deploy` | Register commands to the test guild (instant). |
 | `npm run deploy:global` | Register commands globally (release). |
 | `npm test [module]` | Validate module(s) against the contract. |
 | `npm run docs` | Regenerate `docs/COMMANDS.md`. |
 | `npm run docs:check` | Fail if `docs/COMMANDS.md` is stale (CI). |
-| `npm run avatar` | Set the bot's Discord avatar to `images/bamf.png` (wrap in `op run`). |
+| `npm run avatar` | Set the bot's Discord avatar to `images/bamf.png`. |
 
 ## Running full-time
 
 See **[docs/HOSTING.md](./docs/HOSTING.md)** for self-hosting on a Windows server
-with PM2 and a 1Password service account (no inbound ports required).
+with PM2 (no inbound ports required).
 
 ## License
 

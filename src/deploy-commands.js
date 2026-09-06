@@ -2,8 +2,8 @@
 //   node src/deploy-commands.js            -> guild-scoped (instant, for dev)
 //   node src/deploy-commands.js --global   -> global (all servers, ~1h to propagate)
 //
-// Run through 1Password so the token is injected at runtime:
-//   op run --env-file=.env -- node src/deploy-commands.js
+// The token is read from a local .env file (see src/config.js):
+//   node src/deploy-commands.js      (or: npm run deploy)
 
 import { REST, Routes } from "discord.js";
 import { secrets } from "./config.js";

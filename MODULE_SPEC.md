@@ -155,11 +155,11 @@ match. Recommended once modules run on a shared backend.
    ```
 5. **Register commands** against the test server (guild-scoped, instant):
    ```
-   op run --env-file=.env -- npm run deploy
+   npm run deploy
    ```
 6. **Run the core** and try the command in Discord:
    ```
-   op run --env-file=.env -- npm start
+   npm start
    ```
 7. **Regenerate the docs** (CI will fail if you skip this):
    ```

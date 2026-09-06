@@ -15,8 +15,7 @@
     "test": "node scripts/test-module.js",
     "test:module": "node scripts/test-module.js",
     "avatar": "node scripts/set-avatar.js",
-    "module:hello": "node modules/hello-world/index.js",
-    "dev": "op run --env-file=.env -- node src/index.js"
+    "module:hello": "node modules/hello-world/index.js"
   },
   "keywords": [
     "discord",

@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Environment / secrets - real secrets are injected at runtime via 1Password (op).
-# Only .env.example (op:// references, no secrets) is tracked.
+# Environment / secrets - .env holds real values and is never committed.
+# Only .env.example (placeholders, no secrets) is tracked.
 .env
 .env.*
 !.env.example

@@ -1,25 +1,24 @@
 // PM2 process config for running BamfBot full-time (see docs/HOSTING.md).
-// Runs the core and each module as separate, auto-restarting processes, each
-// wrapped in `op run` so secrets are injected at runtime and never hit disk.
+// Runs the core and each module as separate, auto-restarting processes.
 //
 //   pm2 start ecosystem.config.cjs
 //   pm2 logs            # tail output
 //   pm2 save            # remember these processes across reboots
 //
-// Requires the 1Password CLI (`op`) on PATH and non-interactive auth
-// (OP_SERVICE_ACCOUNT_TOKEN) for unattended restarts - see docs/HOSTING.md.
+// The core reads its secrets from a local .env file (gitignored); no external
+// tooling is required for unattended restarts.
 
 module.exports = {
   apps: [
     {
       name: "bamf-core",
-      script: "op",
-      args: ["run", "--env-file=.env", "--", "node", "src/index.js"],
+      script: "src/index.js",
       cwd: __dirname,
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
-      // The core needs secrets; op supplies them from .env references.
+      // The core loads .env itself (see src/config.js) and holds the Discord
+      // connection.
     },
     {
       name: "bamf-hello-world",

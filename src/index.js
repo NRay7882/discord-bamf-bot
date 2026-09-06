@@ -1,8 +1,8 @@
 // BamfBot core entrypoint (section 4.2). Connects to Discord, loads the module
 // registry, and routes every slash command to its owning module.
 //
-// Run through 1Password so secrets are injected at runtime:
-//   op run --env-file=.env -- node src/index.js
+// Secrets are read from a local .env file (see .env.example and src/config.js):
+//   node src/index.js        (or: npm start)
 
 import { Client, Events } from "discord.js";
 import { secrets } from "./config.js";

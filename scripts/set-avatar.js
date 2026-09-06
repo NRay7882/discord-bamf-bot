@@ -2,8 +2,8 @@
 // One-time / occasional use. Discord rate-limits avatar changes (a couple per
 // hour), so don't script this on a loop.
 //
-//   op run --env-file=.env -- node scripts/set-avatar.js
-//   op run --env-file=.env -- node scripts/set-avatar.js images/bamf.png
+//   node scripts/set-avatar.js                 (or: npm run avatar)
+//   node scripts/set-avatar.js images/bamf.png
 
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";

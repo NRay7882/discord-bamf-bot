@@ -19,73 +19,86 @@ to Discord, and modules listen only on `localhost`. You do **not** need to
 port-forward or open the firewall on a home server. Keep module ports bound to
 localhost and unexposed.
 
+**No DNS / no-ip / dynamic DNS needed either.** Because nothing on the internet
+connects *in* to reach the bot, BamfBot needs no domain name and no dynamic-DNS
+record. That's the opposite of a Minecraft server, where players connect *in* to
+your machine and a no-ip hostname is what points them at your changing home IP.
+Reuse your no-ip setup for Minecraft; the bot needs none of it. (The only thing
+that would change this is a future module that exposes a *public* web page or
+uses Discord's HTTP "Interactions Endpoint" instead of the gateway - not the
+case today, since modules bind to localhost only.)
+
 ---
 
 ## Self-hosting on the Windows server (free)
 
 ### 1. One-time setup on the server
-- Install **Node 24+** (the dev machine uses 26), **git**, and the
-  **1Password CLI** (`op`).
+- Install **Node 24+** (the dev machine uses 26) and **git**.
 - Clone the repo and install deps:
   ```
   git clone https://github.com/NRay7882/discord-bamf-bot.git
   cd discord-bamf-bot
   npm install
   ```
-- Create `.env` from the example (it holds only `op://` references, no secrets):
+- Create `.env` from the example and fill in the real values:
   ```
   copy .env.example .env
   ```
+  `.env` is gitignored and holds the real bot token, application ID, and test
+  server ID. The bot loads it automatically at startup - no external tooling.
 
-### 2. Let `op` work unattended
-Interactive `op run` is fine while you're at the keyboard, but a full-time bot
-must survive reboots without someone signing in. Use a **1Password Service
-Account**:
+### 2. Keep `.env` safe
+`.env` holds the real bot token in plain text, so it is the one file to protect:
 
-1. In 1Password, create a Service Account with **read** access to the vault
-   holding your bot's credential item.
-2. Put its token in the environment the bot runs under:
-   ```
-   setx OP_SERVICE_ACCOUNT_TOKEN "ops_..."   (then reopen the shell)
-   ```
-   `op run` then resolves the `op://` references with no interactive sign-in.
-
-> If your 1Password plan doesn't offer service accounts, you can still run
-> `op run` in a signed-in terminal session for testing - it just won't come back
-> automatically after a reboot. Don't work around this by writing resolved
-> secrets into `.env`; that defeats the whole secrets model.
+- It is **gitignored** - never commit it or paste it anywhere public. A leaked
+  token lets anyone drive the bot; if that happens, reset it in the Discord
+  developer portal and update `.env`.
+- Restrict the folder to the account the bot runs as (default NTFS permissions
+  on a single-user home server are usually fine).
+- Because the bot reads `.env` directly, unattended restarts after a reboot need
+  nothing extra - PM2 relaunches `node`, which reloads `.env` on its own.
 
 ### 3. Register the commands (once, and after any command change)
 ```
-op run --env-file=.env -- npm run deploy
+npm run deploy
 ```
 Guild-scoped for the test server (instant). Use `npm run deploy:global` for the
-public release (propagates in up to ~1 hour).
+public release (propagates in up to ~1 hour). `scripts\update.ps1` runs this for
+you automatically whenever a module manifest changes.
 
-### 4. Run it full-time with PM2
+### 4. Run it full-time with PM2 (one command)
 [PM2](https://pm2.keymetrics.io/) is a free process manager that keeps the core
-and modules alive and restarts them on crash. An `ecosystem.config.cjs` is
-included.
+and modules alive and restarts them on crash, driven by the included
+`ecosystem.config.cjs`.
+
+Run the one-time setup script from an **elevated** (Run as Administrator)
+PowerShell on the host:
 
 ```
-npm install -g pm2
+.\scripts\service-setup.ps1
+```
+
+It checks prerequisites (including that `.env` exists with a real token),
+installs `pm2` + `pm2-windows-startup`, starts the core and modules, registers
+PM2 to resurrect on boot, and saves the process list.
+
+<details>
+<summary>What that runs, if you'd rather do it by hand</summary>
+
+```
+npm install -g pm2 pm2-windows-startup
 pm2 start ecosystem.config.cjs
-pm2 logs            # watch output
-pm2 status          # see the processes
-pm2 save            # remember this process list
+pm2-startup install      # register boot-start (needs an elevated shell)
+pm2 save                 # remember this process list
+pm2 logs                 # watch output
+pm2 status               # see the processes
 ```
+</details>
 
-**Start on boot (Windows):** PM2's `startup` needs a helper on Windows. Either:
-- `npm install -g pm2-windows-startup && pm2-startup install`, then `pm2 save`; or
-- create a **Task Scheduler** task "At startup" that runs
-  `pm2 resurrect` (after a one-time `pm2 save`).
-
-Make sure `OP_SERVICE_ACCOUNT_TOKEN` is set for the account the task runs as, or
-the core can't get its token on an unattended restart.
-
-Alternative to PM2 if you prefer a true Windows service:
-[NSSM](https://nssm.cc/) can wrap `op run --env-file=.env -- node src/index.js`
-as a service, with a second service per module. PM2 is simpler to start with.
+Alternative if you prefer a true Windows service:
+[NSSM](https://nssm.cc/) can wrap `node src/index.js` (with the working directory
+set to the repo so `.env` is found) as a service, plus one service per module.
+PM2 is simpler to start with.
 
 ### 5. Living alongside Minecraft
 - BamfBot is light (idle: tens of MB RAM, negligible CPU). It won't compete with
@@ -95,12 +108,31 @@ as a service, with a second service per module. PM2 is simpler to start with.
   (`runtime.invokeUrl`) and its `PORT`.
 
 ### 6. Updating
+When new modules or fixes are published, RDP in and run:
+
+```
+.\scripts\update.ps1
+```
+
+It fast-forwards `git pull`, then does only what the diff actually requires:
+`npm install` only if the root lockfile changed, re-deploys slash commands only
+if a module manifest changed, and `pm2 restart all` only if runtime code changed
+(a docs-only update leaves the bot running untouched). If nothing changed, it
+says so and does nothing.
+
+Flags: `-Global` deploys command changes globally instead of guild-scoped;
+`-NoDeploy` skips command registration; `-Force` restarts even with no changes.
+
+<details>
+<summary>The equivalent manual steps</summary>
+
 ```
 git pull
-npm install
-op run --env-file=.env -- npm run deploy   # only if commands changed
-pm2 restart all
+npm install          # if package-lock.json changed
+npm run deploy       # if a module manifest changed
+pm2 restart all      # if code changed
 ```
+</details>
 
 ---
 
@@ -111,7 +143,7 @@ with a free/cheap tier:
 
 - Containerize the core and modules (a `docker-compose.yml` is on the roadmap).
 - Store secrets with the platform's secret manager (e.g. `fly secrets set
-  DISCORD_TOKEN=...`) instead of `op run`, or run a 1Password Connect sidecar.
+  DISCORD_TOKEN=...`); the app reads them straight from the environment.
 - No inbound ports needed there either - only the outbound Discord connection.
 
 Stay on the free self-hosted setup until traffic or reliability actually
