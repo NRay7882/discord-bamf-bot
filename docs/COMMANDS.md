@@ -7,8 +7,7 @@
 |---------|-------------|-------|--------|
 | `/help [command]` | List BamfBot's commands, or show detail for one. | private | _core_ |
 | `/hello` | Get a friendly hello world | public | `hello-world` |
-| `/thread-list [scope] [deliver]` | Privately get a grouped list of the server's open threads. | private | `thread-directory` |
-| `/threads [setup] [disable] [refresh] [status] [help] [sort] [order] [filter] [exclude] [include]` | Admin: set up and tune the maintained thread directory channel. | private | `thread-directory` |
+| `/threads [list] [setup] [disable] [refresh] [status] [help] [sort] [order] [filter] [exclude] [include]` | The server's thread directory: list, set up, and manage it. | private | `thread-directory` |
 
 ## Modules
 

@@ -14,17 +14,21 @@ messages on its own - none of which the HTTP module contract exposes. It declare
 
 ## Commands
 
-### `/thread-list` (any member)
-Privately returns the grouped thread list.
-- `scope`: `all` (default), `category` (this channel's category), or `channel` (this channel only).
-- `deliver`: `here` (ephemeral, default) or `dm`.
+Everything lives under one `/threads` command. `list` and `help` are open to any member; the
+rest manage the directory and require **Manage Server** (enforced in-handler, since Discord only
+gates whole commands, not subcommands).
 
-### `/threads` (admins - requires **Manage Server**)
+### Open to any member
+- `list [scope] [deliver]` - privately returns the grouped thread list.
+  - `scope`: `all` (default), `category` (this channel's category), or `channel` (this channel only).
+  - `deliver`: `here` (ephemeral, default) or `dm`.
+- `help` - worked examples for organizing and displaying the list.
+
+### Manage Server only
 - `setup channel:<#channel>` - maintain the directory in that channel and build it now.
 - `disable` - stop maintaining (leaves the existing messages).
 - `refresh` - rebuild immediately.
 - `status` - show the current channel and sort settings.
-- `help` - worked examples for organizing and displaying the list.
 - `sort categories:<custom|alpha|position> threads:<activity|alpha|created>` - ordering.
 - `order categories:"Politics, Fun & Games, Health & Exercise, Movies & TV"` - set a custom
   category order by name (also switches category ordering to `custom`).
@@ -36,7 +40,7 @@ Privately returns the grouped thread list.
 
 By default the list shows only **open, non-forum** threads. Forum and media channel posts and
 closed/archived threads are hidden until you opt in with `/threads filter`, and any channel you
-`exclude` is dropped from both the maintained channel and `/thread-list`.
+`exclude` is dropped from both the maintained channel and `/threads list`.
 
 ## How the maintained channel works
 
