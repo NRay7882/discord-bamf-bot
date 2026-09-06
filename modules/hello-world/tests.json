@@ -1,0 +1,9 @@
+{
+  "hello": [
+    {
+      "name": "default",
+      "request": { "options": {} },
+      "expect": { "content": "hello world", "ephemeral": false }
+    }
+  ]
+}

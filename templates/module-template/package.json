@@ -1,0 +1,10 @@
+{
+  "name": "bamf-module-CHANGE-ME",
+  "version": "0.1.0",
+  "description": "A BamfBot module.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  }
+}

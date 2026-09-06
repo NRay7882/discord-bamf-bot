@@ -1,0 +1,32 @@
+{
+  "name": "discord-bamf-bot",
+  "version": "0.1.0",
+  "description": "A modular, community-extensible Discord bot. The core routes slash commands to self-contained modules over HTTP + JSON.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "deploy:global": "node src/deploy-commands.js --global",
+    "docs": "node scripts/generate-docs.js",
+    "docs:check": "node scripts/generate-docs.js --check",
+    "test": "node scripts/test-module.js",
+    "test:module": "node scripts/test-module.js",
+    "avatar": "node scripts/set-avatar.js",
+    "module:hello": "node modules/hello-world/index.js",
+    "dev": "op run --env-file=.env -- node src/index.js"
+  },
+  "keywords": [
+    "discord",
+    "discord.js",
+    "bot",
+    "modular",
+    "slash-commands"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "change-me": [
+    {
+      "name": "with-text",
+      "request": { "options": { "text": "hi" } },
+      "expect": { "contentIncludes": "hi", "ephemeral": false }
+    },
+    {
+      "name": "no-text",
+      "request": { "options": {} },
+      "expect": { "ephemeral": false }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "hello-world",
+  "version": "0.1.0",
+  "description": "Replies with 'hello world'.",
+  "language": "javascript",
+  "runtime": { "invokeUrl": "http://localhost:8081" },
+  "commands": [
+    {
+      "name": "hello",
+      "description": "Get a friendly hello world",
+      "options": [],
+      "ephemeral": false,
+      "defaultMemberPermissions": null
+    }
+  ],
+  "discord": {
+    "oauthScopes": ["bot", "applications.commands"],
+    "botPermissions": [],
+    "gatewayIntents": []
+  }
+}
