@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Runtime state (per-guild module config, e.g. thread-directory). Never committed.
+data/
+
 # Environment / secrets - .env holds real values and is never committed.
 # Only .env.example (placeholders, no secrets) is tracked.
 .env

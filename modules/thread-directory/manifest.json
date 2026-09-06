@@ -1,0 +1,128 @@
+{
+  "name": "thread-directory",
+  "version": "0.1.0",
+  "description": "Maintains a live, grouped list of a server's threads and hands it to members on demand.",
+  "language": "javascript",
+  "transport": "in-process",
+  "runtime": { "handler": "handler.js" },
+  "commands": [
+    {
+      "name": "thread-list",
+      "description": "Privately get a grouped list of the server's open threads.",
+      "ephemeral": true,
+      "defaultMemberPermissions": null,
+      "options": [
+        {
+          "type": "string",
+          "name": "scope",
+          "description": "Which threads to include.",
+          "required": false,
+          "choices": [
+            { "name": "All threads", "value": "all" },
+            { "name": "This channel's category", "value": "category" },
+            { "name": "This channel only", "value": "channel" }
+          ]
+        },
+        {
+          "type": "string",
+          "name": "deliver",
+          "description": "Where to send the list.",
+          "required": false,
+          "choices": [
+            { "name": "Here (only you see it)", "value": "here" },
+            { "name": "Direct message", "value": "dm" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "threads",
+      "description": "Admin: set up and tune the maintained thread directory channel.",
+      "ephemeral": true,
+      "defaultMemberPermissions": ["ManageGuild"],
+      "options": [
+        {
+          "type": "subcommand",
+          "name": "setup",
+          "description": "Maintain the thread directory in a channel (build it now).",
+          "options": [
+            {
+              "type": "channel",
+              "name": "channel",
+              "description": "The read-only channel the bot should keep updated.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "type": "subcommand",
+          "name": "disable",
+          "description": "Stop maintaining the directory (leaves existing messages)."
+        },
+        {
+          "type": "subcommand",
+          "name": "refresh",
+          "description": "Rebuild the directory channel right now."
+        },
+        {
+          "type": "subcommand",
+          "name": "status",
+          "description": "Show the current directory channel and sort settings."
+        },
+        {
+          "type": "subcommand",
+          "name": "sort",
+          "description": "Set how categories and threads are ordered.",
+          "options": [
+            {
+              "type": "string",
+              "name": "categories",
+              "description": "How to order category groups.",
+              "required": false,
+              "choices": [
+                { "name": "Custom order (see /threads order)", "value": "custom" },
+                { "name": "Alphabetical", "value": "alpha" },
+                { "name": "Discord's channel order", "value": "position" }
+              ]
+            },
+            {
+              "type": "string",
+              "name": "threads",
+              "description": "How to order threads within a channel.",
+              "required": false,
+              "choices": [
+                { "name": "Most recent activity", "value": "activity" },
+                { "name": "Alphabetical", "value": "alpha" },
+                { "name": "Newest created", "value": "created" }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "subcommand",
+          "name": "order",
+          "description": "Set a custom category order by name (comma-separated).",
+          "options": [
+            {
+              "type": "string",
+              "name": "categories",
+              "description": "e.g. Politics, Fun & Games, Health & Exercise, Movies & TV",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "discord": {
+    "oauthScopes": ["bot", "applications.commands"],
+    "botPermissions": [
+      "ViewChannel",
+      "SendMessages",
+      "ManageMessages",
+      "ReadMessageHistory",
+      "ManageThreads"
+    ],
+    "gatewayIntents": []
+  }
+}

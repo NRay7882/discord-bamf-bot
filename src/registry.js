@@ -36,7 +36,14 @@ function validateManifest(manifest, source) {
   if (!manifest || typeof manifest !== "object") fail(name, "not an object");
   if (typeof manifest.name !== "string") fail(name, "missing string 'name'");
   if (typeof manifest.version !== "string") fail(name, "missing string 'version'");
-  if (typeof manifest.runtime?.invokeUrl !== "string") {
+  // In-process (first-party) modules run inside the core with direct discord.js
+  // access instead of answering an HTTP /invoke, so they declare a handler file
+  // rather than an invokeUrl. Everything else about the manifest is identical.
+  if (manifest.transport === "in-process") {
+    if (typeof manifest.runtime?.handler !== "string") {
+      fail(name, "in-process module needs string 'runtime.handler'");
+    }
+  } else if (typeof manifest.runtime?.invokeUrl !== "string") {
     fail(name, "missing string 'runtime.invokeUrl'");
   }
   if (!Array.isArray(manifest.commands) || manifest.commands.length === 0) {
@@ -50,10 +57,21 @@ function validateManifest(manifest, source) {
       fail(name, `command "${command.name}" needs a non-empty description`);
     }
     for (const option of command.options ?? []) {
-      if (!OPTION_TYPES[option.type]) {
-        fail(name, `command "${command.name}" has option "${option.name}" with unknown type "${option.type}"`);
-      }
+      validateOption(name, command, option);
     }
+  }
+}
+
+// Validate an option and any nested options (subcommands / subcommand groups).
+function validateOption(moduleName, command, option) {
+  if (!OPTION_TYPES[option.type]) {
+    fail(
+      moduleName,
+      `command "${command.name}" has option "${option.name}" with unknown type "${option.type}"`
+    );
+  }
+  for (const nested of option.options ?? []) {
+    validateOption(moduleName, command, nested);
   }
 }
 
@@ -73,15 +91,20 @@ function resolveMemberPermissions(value) {
   throw new Error(`Unsupported defaultMemberPermissions: ${JSON.stringify(value)}`);
 }
 
-/** Convert one manifest command into the JSON Discord expects for registration. */
-export function toDiscordCommand(command) {
-  const options = (command.options ?? []).map((option) => {
-    const built = {
-      type: OPTION_TYPES[option.type],
-      name: option.name,
-      description: option.description ?? option.name,
-      required: Boolean(option.required),
-    };
+// Build one option (recursively, so subcommands and subcommand groups carry
+// their own nested options through to Discord).
+function buildOption(option) {
+  const built = {
+    type: OPTION_TYPES[option.type],
+    name: option.name,
+    description: option.description ?? option.name,
+  };
+  if (option.type === "subcommand" || option.type === "subcommand_group") {
+    // Containers do not take `required` or `choices`; they hold nested options.
+    const nested = (option.options ?? []).map(buildOption);
+    if (nested.length > 0) built.options = nested;
+  } else {
+    built.required = Boolean(option.required);
     if (Array.isArray(option.choices)) {
       built.choices = option.choices.map((choice) =>
         typeof choice === "object"
@@ -89,8 +112,13 @@ export function toDiscordCommand(command) {
           : { name: String(choice), value: choice }
       );
     }
-    return built;
-  });
+  }
+  return built;
+}
+
+/** Convert one manifest command into the JSON Discord expects for registration. */
+export function toDiscordCommand(command) {
+  const options = (command.options ?? []).map(buildOption);
 
   const built = {
     name: command.name,
@@ -147,6 +175,7 @@ export async function loadRegistry({ modulesDir } = {}) {
 
     validateManifest(manifest, entry.name);
     manifest.__dir = join(dir, entry.name);
+    manifest.transport = manifest.transport === "in-process" ? "in-process" : "http";
 
     for (const command of manifest.commands) {
       if (commandMap.has(command.name)) {

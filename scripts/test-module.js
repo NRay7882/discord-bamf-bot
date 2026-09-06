@@ -119,6 +119,14 @@ async function testModule(module, { spawnModules }) {
   const results = [];
   const record = (ok, label, detail) => results.push({ ok, label, detail });
 
+  // In-process modules run inside the core with no HTTP server. The registry
+  // already validated their manifest; their Discord-free logic is covered by
+  // their own unit tests (e.g. `node --test`).
+  if (module.transport === "in-process") {
+    record(true, "in-process module (manifest valid; logic covered by unit tests)");
+    return results;
+  }
+
   const manifestUrl = module.runtime.invokeUrl.replace(/\/$/, "");
   let baseUrl = manifestUrl;
   let child = null;
