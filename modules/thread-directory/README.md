@@ -24,6 +24,7 @@ Privately returns the grouped thread list.
 - `disable` - stop maintaining (leaves the existing messages).
 - `refresh` - rebuild immediately.
 - `status` - show the current channel and sort settings.
+- `help` - worked examples for organizing and displaying the list.
 - `sort categories:<custom|alpha|position> threads:<activity|alpha|created>` - ordering.
 - `order categories:"Politics, Fun & Games, Health & Exercise, Movies & TV"` - set a custom
   category order by name (also switches category ordering to `custom`).

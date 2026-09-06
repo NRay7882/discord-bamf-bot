@@ -269,6 +269,8 @@ async function threadsAdmin(interaction) {
       return refreshCommand(interaction, guild);
     case "status":
       return statusCommand(interaction, guild);
+    case "help":
+      return helpCommand(interaction, guild);
     case "sort":
       return sortCommand(interaction, guild);
     case "order":
@@ -357,6 +359,49 @@ async function statusCommand(interaction, guild) {
     `Managed messages: ${cfg.managedMessageIds.length}`,
     `Last updated: ${cfg.updatedAt ? `<t:${Math.floor(cfg.updatedAt / 1000)}:R>` : "never"}`,
   ];
+  await interaction.reply({
+    content: lines.join("\n"),
+    flags: MessageFlags.Ephemeral,
+    allowedMentions: { parse: [] },
+  });
+}
+
+async function helpCommand(interaction, guild) {
+  const cfg = await store.get(guild.id);
+  const channelRef = cfg.channelId ? `<#${cfg.channelId}>` : "a channel you pick";
+
+  const lines = [
+    "**Thread directory - command guide**",
+    "",
+    `The bot keeps ${channelRef} updated automatically with every open thread, grouped by category. The "Updated ..." line shows when it last rebuilt; new, renamed, or closed threads update it within a few seconds.`,
+    "",
+    "__Set up and control the channel__",
+    "`/threads setup channel:#open-threads` - maintain the list in a channel (builds it now)",
+    "`/threads refresh` - rebuild the channel right now",
+    "`/threads status` - show the current channel and sort settings",
+    "`/threads disable` - stop maintaining it (leaves the messages in place)",
+    "",
+    "__Change the order of the category headings__",
+    "`/threads order categories:Politics, Fun & Games, Health & Exercise, Movies & TV`",
+    " - lists categories in exactly that order (and switches ordering to custom)",
+    "`/threads sort categories:custom` - use the custom order you set above",
+    "`/threads sort categories:alpha` - A to Z",
+    "`/threads sort categories:position` - match Discord's own category order",
+    "",
+    "__Change how threads sort under each channel__",
+    "`/threads sort threads:activity` - most recent activity first (default)",
+    "`/threads sort threads:alpha` - A to Z",
+    "`/threads sort threads:created` - newest thread first",
+    "",
+    "__Private, on-demand list (any member)__",
+    "`/thread-list` - all open threads, only you can see it",
+    "`/thread-list scope:category` - only this channel's category",
+    "`/thread-list scope:channel` - only this channel",
+    "`/thread-list deliver:dm` - send it to your DMs instead",
+    "",
+    "Tip: `/threads order` matches categories by name; any you leave out are added alphabetically after the ones you list. Closed and archived threads are hidden by design, so the list always shows what is open now.",
+  ];
+
   await interaction.reply({
     content: lines.join("\n"),
     flags: MessageFlags.Ephemeral,

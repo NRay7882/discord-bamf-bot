@@ -71,6 +71,11 @@
         },
         {
           "type": "subcommand",
+          "name": "help",
+          "description": "Show worked examples for organizing and displaying the thread list."
+        },
+        {
+          "type": "subcommand",
           "name": "sort",
           "description": "Set how categories and threads are ordered.",
           "options": [
