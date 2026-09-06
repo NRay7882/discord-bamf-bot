@@ -1,0 +1,28 @@
+{
+  "name": "CHANGE-ME",
+  "version": "0.1.0",
+  "description": "One line describing what this module does.",
+  "language": "javascript",
+  "runtime": { "invokeUrl": "http://localhost:8090" },
+  "commands": [
+    {
+      "name": "change-me",
+      "description": "What this command does (shown in Discord and /help).",
+      "options": [
+        {
+          "name": "text",
+          "description": "An example string option. Delete if unused.",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "ephemeral": false,
+      "defaultMemberPermissions": null
+    }
+  ],
+  "discord": {
+    "oauthScopes": ["bot", "applications.commands"],
+    "botPermissions": [],
+    "gatewayIntents": []
+  }
+}

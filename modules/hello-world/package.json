@@ -1,0 +1,10 @@
+{
+  "name": "bamf-module-hello-world",
+  "version": "0.1.0",
+  "description": "BamfBot hello-world module: replies with 'hello world'.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  }
+}
