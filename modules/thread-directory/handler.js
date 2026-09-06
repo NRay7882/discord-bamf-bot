@@ -2,9 +2,10 @@
 // discord.js access (see src/inprocess.js). Responsibilities:
 //   - init(ctx): load per-guild config, subscribe to thread/channel events,
 //     start a safety-net refresh loop, and do a startup rebuild.
-//   - commands.thread-list: private, on-demand listing for any member.
-//   - commands.threads: admin subcommands to set up and tune the maintained
-//     directory channel.
+//   - commands.threads: one command with subcommands. `list` and `help` are open
+//     to any member; the rest set up and tune the maintained directory channel
+//     and require Manage Server (enforced in-handler, since Discord only gates
+//     whole commands).
 //
 // All Discord-free logic lives in render.js (unit-tested); Discord enumeration in
 // threads.js; persistence in store.js.
@@ -233,7 +234,7 @@ async function threadList(interaction) {
       await interaction.editReply("Sent you a DM with the thread list.");
     } catch {
       await interaction.editReply(
-        "I couldn't DM you - check whether DMs from server members are allowed, or run `/thread-list` without `deliver:dm`."
+        "I couldn't DM you - check whether DMs from server members are allowed, or run `/threads list` without `deliver:dm`."
       );
     }
     return;
@@ -249,14 +250,35 @@ async function threadList(interaction) {
   }
 }
 
-async function threadsAdmin(interaction) {
+// Subcommands any member may run. Everything else manages the directory and
+// needs Manage Server. Discord only gates whole commands, not subcommands, so we
+// enforce this here (see the null defaultMemberPermissions in the manifest).
+const OPEN_SUBCOMMANDS = new Set(["list", "help"]);
+
+async function threadsCommand(interaction) {
   const guild = interaction.guild;
   if (!guild) {
     await interaction.reply({ content: "Run this in a server.", flags: MessageFlags.Ephemeral });
     return;
   }
   const sub = interaction.options.getSubcommand();
+
+  if (
+    !OPEN_SUBCOMMANDS.has(sub) &&
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+  ) {
+    await interaction.reply({
+      content: `You need the **Manage Server** permission to use \`/threads ${sub}\`. Any member can use \`/threads list\` and \`/threads help\`.`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   switch (sub) {
+    case "list":
+      return threadList(interaction);
+    case "help":
+      return helpCommand(interaction, guild);
     case "setup":
       return setupCommand(interaction, guild);
     case "disable":
@@ -265,8 +287,6 @@ async function threadsAdmin(interaction) {
       return refreshCommand(interaction, guild);
     case "status":
       return statusCommand(interaction, guild);
-    case "help":
-      return helpCommand(interaction, guild);
     case "sort":
       return sortCommand(interaction, guild);
     case "order":
@@ -419,7 +439,7 @@ async function excludeCommand(interaction, guild) {
   set.add(channel.id);
   const updated = await store.update(guild.id, { filters: { excludedChannelIds: [...set] } });
   await interaction.reply({
-    content: `Excluded <#${channel.id}> - its threads won't appear in the directory or \`/thread-list\`.`,
+    content: `Excluded <#${channel.id}> - its threads won't appear in the directory or \`/threads list\`.`,
     flags: MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
@@ -510,10 +530,10 @@ async function helpCommand(interaction, guild) {
     "`/threads include channel:#a-channel` - list that channel again",
     "",
     "__Private, on-demand list (any member)__",
-    "`/thread-list` - all open threads, only you can see it",
-    "`/thread-list scope:category` - only this channel's category",
-    "`/thread-list scope:channel` - only this channel",
-    "`/thread-list deliver:dm` - send it to your DMs instead",
+    "`/threads list` - all open threads, only you can see it",
+    "`/threads list scope:category` - only this channel's category",
+    "`/threads list scope:channel` - only this channel",
+    "`/threads list deliver:dm` - send it to your DMs instead",
     "",
     "Tip: `/threads order` matches categories by name; any you leave out are added alphabetically after the ones you list. Use `/threads status` to see the current filters and excluded channels.",
   ];
@@ -598,6 +618,5 @@ function resolveCategoryOrder(guild, raw) {
 }
 
 export const commands = {
-  "thread-list": threadList,
-  threads: threadsAdmin,
+  threads: threadsCommand,
 };

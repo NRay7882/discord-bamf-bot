@@ -7,40 +7,39 @@
   "runtime": { "handler": "handler.js" },
   "commands": [
     {
-      "name": "thread-list",
-      "description": "Privately get a grouped list of the server's open threads.",
+      "name": "threads",
+      "description": "The server's thread directory: list, set up, and manage it.",
       "ephemeral": true,
       "defaultMemberPermissions": null,
       "options": [
         {
-          "type": "string",
-          "name": "scope",
-          "description": "Which threads to include.",
-          "required": false,
-          "choices": [
-            { "name": "All threads", "value": "all" },
-            { "name": "This channel's category", "value": "category" },
-            { "name": "This channel only", "value": "channel" }
+          "type": "subcommand",
+          "name": "list",
+          "description": "Privately get a grouped list of the server's open threads.",
+          "options": [
+            {
+              "type": "string",
+              "name": "scope",
+              "description": "Which threads to include.",
+              "required": false,
+              "choices": [
+                { "name": "All threads", "value": "all" },
+                { "name": "This channel's category", "value": "category" },
+                { "name": "This channel only", "value": "channel" }
+              ]
+            },
+            {
+              "type": "string",
+              "name": "deliver",
+              "description": "Where to send the list.",
+              "required": false,
+              "choices": [
+                { "name": "Here (only you see it)", "value": "here" },
+                { "name": "Direct message", "value": "dm" }
+              ]
+            }
           ]
         },
-        {
-          "type": "string",
-          "name": "deliver",
-          "description": "Where to send the list.",
-          "required": false,
-          "choices": [
-            { "name": "Here (only you see it)", "value": "here" },
-            { "name": "Direct message", "value": "dm" }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "threads",
-      "description": "Admin: set up and tune the maintained thread directory channel.",
-      "ephemeral": true,
-      "defaultMemberPermissions": ["ManageGuild"],
-      "options": [
         {
           "type": "subcommand",
           "name": "setup",
