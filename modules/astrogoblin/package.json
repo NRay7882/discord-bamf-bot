@@ -1,0 +1,11 @@
+{
+  "name": "bamf-module-astrogoblin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BamfBot module: search Astrogoblin videos by spoken words.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

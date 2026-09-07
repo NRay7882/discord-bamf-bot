@@ -1,0 +1,9 @@
+{
+  "astrogoblin": [
+    {
+      "name": "no-query",
+      "request": { "options": {} },
+      "expect": { "contentIncludes": "astrogoblin search", "ephemeral": true }
+    }
+  ]
+}

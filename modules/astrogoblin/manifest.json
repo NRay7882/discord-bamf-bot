@@ -1,0 +1,35 @@
+{
+  "name": "astrogoblin",
+  "version": "0.1.0",
+  "description": "Search Astrogoblin videos by spoken words (via search.astrogoblin.jammaloo.com).",
+  "language": "javascript",
+  "runtime": { "invokeUrl": "http://localhost:8082" },
+  "scope": { "restricted": true },
+  "commands": [
+    {
+      "name": "astrogoblin",
+      "description": "Astrogoblin community tools.",
+      "ephemeral": true,
+      "options": [
+        {
+          "type": "subcommand",
+          "name": "search",
+          "description": "Find Astrogoblin videos where something was said.",
+          "options": [
+            {
+              "type": "string",
+              "name": "query",
+              "description": "Words spoken in a video, e.g. motor running",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "discord": {
+    "oauthScopes": ["bot", "applications.commands"],
+    "botPermissions": [],
+    "gatewayIntents": []
+  }
+}

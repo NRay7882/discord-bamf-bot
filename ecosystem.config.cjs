@@ -46,5 +46,21 @@ module.exports = {
       // Modules hold no Discord secrets. Add BAMF_SHARED_SECRET here (and to the
       // core's env) once you enable it.
     },
+    {
+      name: "bamf-astrogoblin",
+      script: "node",
+      args: ["modules/astrogoblin/index.js"],
+      cwd: __dirname,
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 3000,
+      pmx: false,
+      env: {
+        PORT: "8082",
+      },
+      // Restricted module: allow it in a server with BAMF_SCOPE_ASTROGOBLIN in
+      // the CORE's .env (the guild ID(s), comma-separated). This process only
+      // serves search results and needs no Discord secrets.
+    },
   ],
 };

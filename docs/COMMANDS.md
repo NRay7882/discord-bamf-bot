@@ -8,6 +8,7 @@ Every command is a subcommand of `/bamf`.
 | Command | Description | Reply | Access | Module |
 |---------|-------------|-------|--------|--------|
 | `/bamf help [command]` | List BamfBot's commands, or show detail for one. | private | anyone | _core_ |
+| `/bamf astrogoblin search <query>` | Find Astrogoblin videos where something was said. | private | anyone | `astrogoblin` |
 | `/bamf hello` | Get a friendly hello world | public | anyone | `hello-world` |
 | `/bamf threads list [scope] [deliver]` | Privately get a grouped list of the server's open threads. | private | anyone | `thread-directory` |
 | `/bamf threads setup <channel>` | Maintain the thread directory in a channel (build it now). | private | anyone | `thread-directory` |
@@ -22,6 +23,15 @@ Every command is a subcommand of `/bamf`.
 | `/bamf threads include <channel>` | List a previously excluded channel's threads again. | private | anyone | `thread-directory` |
 
 ## Modules
+
+### `astrogoblin` v0.1.0
+
+Search Astrogoblin videos by spoken words (via search.astrogoblin.jammaloo.com).
+
+- Availability: server-specific (restricted)
+- Language: javascript
+- Bot permissions: none
+- Gateway intents: none
 
 ### `hello-world` v0.1.0
 
