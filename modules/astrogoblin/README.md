@@ -26,9 +26,11 @@ matching caption. Videos with the exact phrase rank above ones that only matched
 loosely (those are flagged `loose match`). The **top result's** YouTube thumbnail
 is shown on the embed (an embed has a single image slot).
 
-The title can carry a custom server emoji via `ASTROGOBLIN_TITLE_EMOJI` (see
-Configuration) - it's shown in the message content, because Discord doesn't render
-custom emoji in embed titles.
+The search title shows a 🔍 by default. It can instead carry a custom emoji via
+`ASTROGOBLIN_TITLE_EMOJI` (see Configuration), shown in the message content since
+Discord doesn't render custom emoji in embed titles. **A custom emoji only renders
+on servers the bot is a member of** - anywhere else it appears as raw text - so
+leave it unset unless the bot is in the emoji's server.
 
 ## How it works
 
@@ -75,7 +77,7 @@ can live there.
 |---------|---------|---------|
 | `PORT` | `8082` | Port the module listens on. |
 | `ASTROGOBLIN_TIMEOUT_MS` | `6000` | Timeout for the request to the search site. |
-| `ASTROGOBLIN_TITLE_EMOJI` | (none) | Custom emoji for the reply title, as its full token `<:name:id>`. Server-specific; the bot must be a member of the emoji's server for it to render. Get the token by typing `\:goblin:` in Discord and sending. |
+| `ASTROGOBLIN_TITLE_EMOJI` | 🔍 | Overrides the default title emoji with a custom one, as its full token `<:name:id>`. Only renders on servers the bot is a member of (otherwise shows as raw text); an application emoji on the bot's own app renders everywhere. Get a guild emoji's token by typing `\:name:` in Discord and sending. |
 
 ## Notes
 
