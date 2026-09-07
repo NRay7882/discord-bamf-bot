@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { loadRegistry, ROOT_COMMAND_NAME } from "../src/registry.js";
 import { buildHelpSubcommand } from "../src/help.js";
+import { buildRequirement, describeRequirement } from "../src/access.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "docs", "COMMANDS.md");
@@ -25,6 +26,14 @@ function optionArgs(options) {
  * per subcommand (`/bamf threads list`); a plain command is a single row
  * (`/bamf hello`).
  */
+function accessCell(access) {
+  const req = buildRequirement({
+    permissions: access?.permissions ?? [],
+    roles: access?.roles ?? [],
+  });
+  return req ? describeRequirement(req) : "anyone";
+}
+
 function commandRows(command, moduleName) {
   const reply = command.ephemeral ? "private" : "public";
   const subs = (command.options ?? []).filter((o) => o.type === "subcommand");
@@ -35,7 +44,7 @@ function commandRows(command, moduleName) {
       const usage = args
         ? `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name} ${args}`
         : `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name}`;
-      return `| \`${usage}\` | ${sub.description} | ${reply} | ${moduleName} |`;
+      return `| \`${usage}\` | ${sub.description} | ${reply} | ${accessCell(sub.access ?? command.access)} | ${moduleName} |`;
     });
   }
 
@@ -43,7 +52,7 @@ function commandRows(command, moduleName) {
   const usage = args
     ? `/${ROOT_COMMAND_NAME} ${command.name} ${args}`
     : `/${ROOT_COMMAND_NAME} ${command.name}`;
-  return [`| \`${usage}\` | ${command.description} | ${reply} | ${moduleName} |`];
+  return [`| \`${usage}\` | ${command.description} | ${reply} | ${accessCell(command.access)} | ${moduleName} |`];
 }
 
 function render(modules, commandMap) {
@@ -55,8 +64,8 @@ function render(modules, commandMap) {
   lines.push("");
   lines.push(`Every command is a subcommand of \`/${ROOT_COMMAND_NAME}\`.`);
   lines.push("");
-  lines.push("| Command | Description | Reply | Module |");
-  lines.push("|---------|-------------|-------|--------|");
+  lines.push("| Command | Description | Reply | Access | Module |");
+  lines.push("|---------|-------------|-------|--------|--------|");
 
   // Core-owned commands first.
   const help = buildHelpSubcommand();
@@ -79,6 +88,7 @@ function render(modules, commandMap) {
       lines.push("");
       lines.push(module.description ?? "");
       lines.push("");
+      lines.push(`- Availability: ${module.__restricted ? "server-specific (restricted)" : "universal"}`);
       lines.push(`- Language: ${module.language ?? "unknown"}`);
       const perms = module.discord?.botPermissions ?? [];
       lines.push(`- Bot permissions: ${perms.length ? perms.join(", ") : "none"}`);

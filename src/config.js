@@ -8,6 +8,10 @@
 // Values already present in the environment take precedence over the file, so
 // other injection methods (a container's or platform's secret store) keep
 // working unchanged.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
 try {
   process.loadEnvFile();
 } catch {
@@ -15,6 +19,9 @@ try {
   // supplies real vars directly). Fall through; required() reports any secret
   // that is actually missing the first time it is used.
 }
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = join(__dirname, "..");
 
 function required(name) {
   const value = process.env[name];
@@ -51,4 +58,66 @@ export const config = {
   sharedSecret: optional("BAMF_SHARED_SECRET", null),
   logLevel: optional("LOG_LEVEL", "info"),
   modulesDir: optional("BAMF_MODULES_DIR", null), // resolved by registry if null
+};
+
+// --- Operator overrides (never committed) -----------------------------------
+//
+// Server-specific choices live outside the tracked repo so a public fork never
+// ships anyone's guild/role IDs (FR: non-universal modules). Two gitignored
+// sources, both optional:
+//   .env             - simple per-module scoping and on/off switches
+//   bamf.local.json  - richer config (server-name lists, per-guild role IDs)
+//
+// bamf.local.json shape:
+//   {
+//     "modules": {
+//       "<module-name>": { "enabled": false, "guildIds": ["..."], "guildNames": ["..."] }
+//     },
+//     "access": {
+//       "<command path>": { "roleIds": { "<guildId>": ["<roleId>", ...] } }
+//     }
+//   }
+// where "<command path>" is "command" or "command subcommand".
+
+function loadLocalConfig() {
+  try {
+    const raw = readFileSync(join(ROOT_DIR, "bamf.local.json"), "utf8");
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error.code === "ENOENT") return {};
+    throw new Error(`bamf.local.json is present but not valid JSON: ${error.message}`);
+  }
+}
+
+function splitList(value) {
+  return (value ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// A module name maps to an env key by upper-casing and turning any run of
+// non-alphanumerics into a single underscore, e.g. "my-module" -> "MY_MODULE".
+function moduleEnvKey(name) {
+  return name.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+}
+
+const localConfig = loadLocalConfig();
+
+export const overrides = {
+  local: localConfig,
+
+  // Modules the operator has turned off entirely (env list; per-module JSON
+  // "enabled": false is handled by the registry).
+  disabledModules: new Set(splitList(process.env.BAMF_DISABLED_MODULES).map((s) => s.toLowerCase())),
+
+  /** Guild IDs granted to a restricted module via `BAMF_SCOPE_<MODULE>`. */
+  envScopeFor(moduleName) {
+    return splitList(process.env[`BAMF_SCOPE_${moduleEnvKey(moduleName)}`]);
+  },
+
+  /** Operator role-ID overrides for a command path in one guild (or []). */
+  roleIdsFor(commandPath, guildId) {
+    return localConfig.access?.[commandPath]?.roleIds?.[guildId] ?? [];
+  },
 };

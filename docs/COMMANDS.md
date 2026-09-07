@@ -5,21 +5,21 @@
 
 Every command is a subcommand of `/bamf`.
 
-| Command | Description | Reply | Module |
-|---------|-------------|-------|--------|
-| `/bamf help [command]` | List BamfBot's commands, or show detail for one. | private | _core_ |
-| `/bamf hello` | Get a friendly hello world | public | `hello-world` |
-| `/bamf threads list [scope] [deliver]` | Privately get a grouped list of the server's open threads. | private | `thread-directory` |
-| `/bamf threads setup <channel>` | Maintain the thread directory in a channel (build it now). | private | `thread-directory` |
-| `/bamf threads disable` | Stop maintaining the directory (leaves existing messages). | private | `thread-directory` |
-| `/bamf threads refresh` | Rebuild the directory channel right now. | private | `thread-directory` |
-| `/bamf threads status` | Show the current directory channel and sort settings. | private | `thread-directory` |
-| `/bamf threads help` | Show worked examples for organizing and displaying the thread list. | private | `thread-directory` |
-| `/bamf threads sort [categories] [threads]` | Set how categories and threads are ordered. | private | `thread-directory` |
-| `/bamf threads order <categories>` | Set a custom category order by name (comma-separated). | private | `thread-directory` |
-| `/bamf threads filter [archived] [forums]` | Include or hide archived threads and forum-channel posts. | private | `thread-directory` |
-| `/bamf threads exclude <channel>` | Stop listing a channel's threads in the directory. | private | `thread-directory` |
-| `/bamf threads include <channel>` | List a previously excluded channel's threads again. | private | `thread-directory` |
+| Command | Description | Reply | Access | Module |
+|---------|-------------|-------|--------|--------|
+| `/bamf help [command]` | List BamfBot's commands, or show detail for one. | private | anyone | _core_ |
+| `/bamf hello` | Get a friendly hello world | public | anyone | `hello-world` |
+| `/bamf threads list [scope] [deliver]` | Privately get a grouped list of the server's open threads. | private | anyone | `thread-directory` |
+| `/bamf threads setup <channel>` | Maintain the thread directory in a channel (build it now). | private | anyone | `thread-directory` |
+| `/bamf threads disable` | Stop maintaining the directory (leaves existing messages). | private | anyone | `thread-directory` |
+| `/bamf threads refresh` | Rebuild the directory channel right now. | private | anyone | `thread-directory` |
+| `/bamf threads status` | Show the current directory channel and sort settings. | private | anyone | `thread-directory` |
+| `/bamf threads help` | Show worked examples for organizing and displaying the thread list. | private | anyone | `thread-directory` |
+| `/bamf threads sort [categories] [threads]` | Set how categories and threads are ordered. | private | anyone | `thread-directory` |
+| `/bamf threads order <categories>` | Set a custom category order by name (comma-separated). | private | anyone | `thread-directory` |
+| `/bamf threads filter [archived] [forums]` | Include or hide archived threads and forum-channel posts. | private | anyone | `thread-directory` |
+| `/bamf threads exclude <channel>` | Stop listing a channel's threads in the directory. | private | anyone | `thread-directory` |
+| `/bamf threads include <channel>` | List a previously excluded channel's threads again. | private | anyone | `thread-directory` |
 
 ## Modules
 
@@ -27,6 +27,7 @@ Every command is a subcommand of `/bamf`.
 
 Replies with 'hello world'.
 
+- Availability: universal
 - Language: javascript
 - Bot permissions: none
 - Gateway intents: none
@@ -35,6 +36,7 @@ Replies with 'hello world'.
 
 Maintains a live, grouped list of a server's threads and hands it to members on demand.
 
+- Availability: universal
 - Language: javascript
 - Bot permissions: ViewChannel, SendMessages, ManageMessages, ReadMessageHistory, ManageThreads
 - Gateway intents: none

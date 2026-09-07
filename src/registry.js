@@ -5,9 +5,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { PermissionFlagsBits } from "discord.js";
-import { config } from "./config.js";
+import { config, overrides } from "./config.js";
 import { log } from "./logger.js";
+import { validateAccess } from "./access.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_MODULES_DIR = join(__dirname, "..", "modules");
@@ -56,6 +56,7 @@ function validateManifest(manifest, source) {
   if (!Array.isArray(manifest.commands) || manifest.commands.length === 0) {
     fail(name, "must declare at least one command in 'commands'");
   }
+  validateScope(name, manifest.scope);
   for (const command of manifest.commands) {
     if (typeof command.name !== "string" || !/^[\w-]{1,32}$/.test(command.name)) {
       fail(name, `command name "${command.name}" is invalid (1-32 chars, word/hyphen)`);
@@ -66,19 +67,25 @@ function validateManifest(manifest, source) {
     if (typeof command.description !== "string" || command.description.length === 0) {
       fail(name, `command "${command.name}" needs a non-empty description`);
     }
-    // Still validate defaultMemberPermissions (catch bad permission names early),
-    // even though it is no longer applied to a top-level command - see
-    // toBamfSubcommand for why.
+    // Per-command access gating (who may run it). The core enforces this at
+    // invocation - see access.js. A subcommand may narrow it further (below).
     try {
-      resolveMemberPermissions(command.defaultMemberPermissions);
+      validateAccess(command.access, `command "${command.name}"`);
     } catch (error) {
-      fail(name, `command "${command.name}": ${error.message}`);
+      fail(name, error.message);
     }
     // Rolling every command under /bamf spends one nesting level, so a command
     // may hold subcommands but not subcommand groups (Discord allows at most
     // /bamf <group> <subcommand>). Reject the too-deep shape here with a clear
     // message rather than letting Discord reject the whole deploy.
     for (const option of command.options ?? []) {
+      if (option.type === "subcommand") {
+        try {
+          validateAccess(option.access, `command "${command.name}" subcommand "${option.name}"`);
+        } catch (error) {
+          fail(name, error.message);
+        }
+      }
       if (option.type === "subcommand_group") {
         fail(
           name,
@@ -104,20 +111,60 @@ function validateOption(moduleName, command, option) {
   }
 }
 
-function resolveMemberPermissions(value) {
-  // Accept null, a numeric string bitfield, or an array of permission names.
-  if (value == null) return null;
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    let bits = 0n;
-    for (const perm of value) {
-      const bit = PermissionFlagsBits[perm];
-      if (bit === undefined) throw new Error(`Unknown permission "${perm}"`);
-      bits |= BigInt(bit);
-    }
-    return bits.toString();
+// A module may declare that it is server-specific, but NEVER which servers - the
+// allowlist lives only in the operator's gitignored config (env / bamf.local.json)
+// so a public repo never carries anyone's guild identifiers. We reject server
+// identifiers found in a committed manifest to enforce that.
+function validateScope(moduleName, scope) {
+  if (scope == null) return;
+  if (typeof scope !== "object" || Array.isArray(scope)) {
+    fail(moduleName, "'scope' must be an object");
   }
-  throw new Error(`Unsupported defaultMemberPermissions: ${JSON.stringify(value)}`);
+  if (scope.restricted !== undefined && typeof scope.restricted !== "boolean") {
+    fail(moduleName, "'scope.restricted' must be a boolean");
+  }
+  if ("guildIds" in scope || "guildNames" in scope) {
+    fail(
+      moduleName,
+      "'scope' must not list guildIds/guildNames in a committed manifest. Set only " +
+        '{ "restricted": true } and configure the allowlist via BAMF_SCOPE_<MODULE> or bamf.local.json.'
+    );
+  }
+}
+
+/**
+ * Resolve a module's effective scope from its manifest plus operator overrides
+ * (env + bamf.local.json), attaching the result to the manifest for later checks.
+ */
+function applyScope(manifest, localModule) {
+  const restricted = manifest.scope?.restricted === true;
+  manifest.__restricted = restricted;
+  manifest.__allowedGuildIds = new Set();
+  manifest.__allowedGuildNames = new Set();
+  if (!restricted) return;
+
+  for (const id of overrides.envScopeFor(manifest.name)) manifest.__allowedGuildIds.add(id);
+  for (const id of localModule.guildIds ?? []) manifest.__allowedGuildIds.add(id);
+  for (const nm of localModule.guildNames ?? []) manifest.__allowedGuildNames.add(String(nm).toLowerCase());
+
+  if (manifest.__allowedGuildIds.size === 0 && manifest.__allowedGuildNames.size === 0) {
+    log.warn("Restricted module has no allowlist; it will be available in no server", {
+      module: manifest.name,
+      hint: `set BAMF_SCOPE_${manifest.name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")} or bamf.local.json`,
+    });
+  }
+}
+
+/**
+ * Whether a (possibly restricted) module is available in a given guild.
+ * Universal modules are available everywhere; restricted modules only where the
+ * operator listed the guild's ID or name.
+ */
+export function isModuleAllowedInGuild(manifest, { guildId, guildName } = {}) {
+  if (!manifest.__restricted) return true;
+  if (guildId && manifest.__allowedGuildIds.has(guildId)) return true;
+  if (guildName && manifest.__allowedGuildNames.has(String(guildName).toLowerCase())) return true;
+  return false;
 }
 
 // Build one option (recursively, so subcommands and subcommand groups carry
@@ -228,6 +275,15 @@ export async function loadRegistry({ modulesDir } = {}) {
     validateManifest(manifest, entry.name);
     manifest.__dir = join(dir, entry.name);
     manifest.transport = manifest.transport === "in-process" ? "in-process" : "http";
+
+    // Operator overrides (never committed): turn a module off, or supply the
+    // guild allowlist for a restricted one.
+    const localModule = overrides.local?.modules?.[manifest.name] ?? {};
+    if (overrides.disabledModules.has(manifest.name.toLowerCase()) || localModule.enabled === false) {
+      log.info("Module disabled by operator config; skipping", { module: manifest.name });
+      continue;
+    }
+    applyScope(manifest, localModule);
 
     for (const command of manifest.commands) {
       if (commandMap.has(command.name)) {

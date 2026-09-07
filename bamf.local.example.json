@@ -1,0 +1,33 @@
+{
+  "//": "Copy this file to bamf.local.json (gitignored) and edit. It holds server-specific",
+  "//modules": "Per-module scoping for RESTRICTED modules, and on/off switches. guildIds/guildNames",
+  "//modules2": "grant a restricted module in those servers; guildNames match is case-insensitive but",
+  "//modules3": "server names are mutable and non-unique, so prefer guildIds. enabled:false turns a module off.",
+  "modules": {
+    "my-community-thing": {
+      "enabled": true,
+      "guildIds": ["111111111111111111"],
+      "guildNames": ["My Community Server"]
+    },
+    "hello-world": {
+      "enabled": false
+    }
+  },
+
+  "//access": "Per-command role-ID overrides for access gating. Key is the command path",
+  "//access2": "(\"command\" or \"command subcommand\"); roleIds is a map of guildId -> allowed role IDs.",
+  "//access3": "This adds to any permissions/roles declared in the manifest (a caller passes if they",
+  "//access4": "satisfy ANY of them). Use it to keep server-specific role IDs out of the repo.",
+  "access": {
+    "secret-thing": {
+      "roleIds": {
+        "111111111111111111": ["333333333333333333"]
+      }
+    },
+    "threads setup": {
+      "roleIds": {
+        "111111111111111111": ["333333333333333333"]
+      }
+    }
+  }
+}

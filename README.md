@@ -74,6 +74,21 @@ The app loads `.env` automatically at startup, so plain `node` / `npm` commands
 pick it up. (Anything already set in the environment wins over the file, so a
 secret manager can supply the values instead if you prefer.)
 
+### Optional: module scoping and access
+
+Most modules are universal - usable in every server. A module can instead be
+**server-specific** (`"scope": { "restricted": true }` in its manifest), and any
+command can be gated to certain permissions or roles (an `access` block). The
+per-server details - which guilds a restricted module is allowed in, and any
+role-ID overrides - are **operator config that is never committed**, so a public
+fork never ships anyone's server IDs:
+
+- `.env`: `BAMF_SCOPE_<MODULE>=<guildId>,...` and `BAMF_DISABLED_MODULES=<name>,...`
+- `bamf.local.json` (gitignored; copy `bamf.local.example.json`) for server-name
+  matching and per-guild role-ID overrides.
+
+See **[MODULE_SPEC.md](./MODULE_SPEC.md)** sections 6-7 for the full model.
+
 ## Run it (local dev)
 
 You need three things: register the commands, start the module, start the core.

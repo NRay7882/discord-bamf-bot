@@ -4,43 +4,35 @@
 //
 // The token is read from a local .env file (see src/config.js):
 //   node src/deploy-commands.js      (or: npm run deploy)
+//
+// This registers the `/bamf` command. Restricted (server-specific) modules are
+// added per-guild by the core at runtime (see src/registrar.js), so:
+//   --global : universal modules only.
+//   guild    : universal + any restricted module allowed in the test guild
+//              (DISCORD_GUILD_ID, matched by ID), for instant local testing.
 
 import { REST, Routes } from "discord.js";
 import { secrets } from "./config.js";
 import { log } from "./logger.js";
-import { loadRegistry, toBamfSubcommand, ROOT_COMMAND_NAME } from "./registry.js";
-import { buildHelpSubcommand } from "./help.js";
+import { loadRegistry, isModuleAllowedInGuild } from "./registry.js";
+import { buildBamfCommand } from "./commands.js";
 import { resolvePrivileges, buildInstallUrl } from "./permissions.js";
-
-// Discord allows at most 25 options (subcommands/groups) on one command.
-const MAX_SUBCOMMANDS = 25;
 
 async function main() {
   const isGlobal = process.argv.includes("--global");
   const { modules, commandMap } = await loadRegistry();
 
-  // Every command rolls up under a single `/bamf` command: the core's help plus
-  // one child per module command (a subcommand, or a subcommand group when the
-  // command owns subcommands of its own).
-  const subcommands = [buildHelpSubcommand()];
-  for (const { command } of commandMap.values()) {
-    subcommands.push(toBamfSubcommand(command));
+  const selected = [];
+  for (const { module, command } of commandMap.values()) {
+    if (isGlobal) {
+      if (!module.__restricted) selected.push(command);
+    } else if (isModuleAllowedInGuild(module, { guildId: secrets.guildId })) {
+      selected.push(command);
+    }
   }
 
-  if (subcommands.length > MAX_SUBCOMMANDS) {
-    throw new Error(
-      `/${ROOT_COMMAND_NAME} would have ${subcommands.length} subcommands; Discord allows at most ${MAX_SUBCOMMANDS}. ` +
-        `Group commands into subcommands or split into a second top-level command.`
-    );
-  }
-
-  const commands = [
-    {
-      name: ROOT_COMMAND_NAME,
-      description: "BamfBot commands.",
-      options: subcommands,
-    },
-  ];
+  const bamf = buildBamfCommand(selected);
+  const commands = [bamf];
 
   const privileges = resolvePrivileges(modules);
   const installUrl = buildInstallUrl(secrets.clientId, privileges);
@@ -54,9 +46,8 @@ async function main() {
   log.info("Deploying slash commands", {
     scope: isGlobal ? "global" : "guild",
     guildId: isGlobal ? undefined : secrets.guildId,
-    count: commands.length,
-    command: ROOT_COMMAND_NAME,
-    subcommands: subcommands.map((s) => s.name),
+    command: bamf.name,
+    subcommands: bamf.options.map((s) => s.name),
   });
 
   const result = await rest.put(route, { body: commands });
@@ -76,6 +67,7 @@ async function main() {
     log.info("Guild-scoped commands appear instantly on the test server.");
   } else {
     log.info("Global commands can take up to ~1 hour to propagate.");
+    log.info("Restricted modules are registered per-guild by the core at runtime.");
   }
 }
 
