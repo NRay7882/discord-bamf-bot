@@ -76,9 +76,19 @@ async function invoke(request) {
     };
   }
 
-  const results = parseResults(html);
-  if (!results.query) results.query = query; // fall back to the user's query
-  return buildResponse(results, { titleEmoji: TITLE_EMOJI });
+  try {
+    const results = parseResults(html);
+    if (!results.query) results.query = query; // fall back to the user's query
+    return buildResponse(results, { titleEmoji: TITLE_EMOJI });
+  } catch {
+    // The site responded but with something we couldn't parse (e.g. its markup
+    // changed, or a challenge page). Fail friendly rather than erroring out.
+    return {
+      content: `I couldn't read the Astrogoblin search results just now. Try again, or search directly: ${searchUrl(query)}`,
+      ephemeral: true,
+      allowedMentions: { parse: [] },
+    };
+  }
 }
 // -----------------------------------------------------------------------------
 

@@ -28,22 +28,33 @@ function phraseRegex(query) {
 function classify(video, phrase) {
   let exact = 0;
   let firstExactSeconds = null;
-  let firstExactSnippet = null;
+  let firstExact = null;
   for (const m of video.matches) {
     if (phrase && phrase.test(m.snippet)) {
       exact++;
       if (firstExactSeconds === null) firstExactSeconds = m.seconds;
-      if (firstExactSnippet === null) firstExactSnippet = m.snippet;
+      if (firstExact === null) firstExact = m;
     }
   }
   const first = video.matches[0] ?? null;
+  const chosen = firstExact ?? first;
   return {
     ...video,
     total: video.matches.length,
     exact,
     linkSeconds: firstExactSeconds ?? first?.seconds ?? null,
-    snippet: firstExactSnippet ?? first?.snippet ?? "",
+    snippet: chosen?.snippet ?? "",
+    terms: chosen?.terms ?? [],
   };
+}
+
+// Bold the matched words within a (already markdown-escaped) snippet. Whole-word,
+// case-insensitive; a no-op when there are no terms.
+function highlight(text, terms) {
+  const uniq = [...new Set((terms ?? []).map((t) => t.trim()).filter(Boolean))];
+  if (uniq.length === 0) return text;
+  const re = new RegExp(`\\b(${uniq.map(escapeRe).join("|")})\\b`, "gi");
+  return text.replace(re, "**$1**");
 }
 
 function rank(a, b) {
@@ -114,7 +125,9 @@ export function buildResponse(results, { titleEmoji = "" } = {}) {
       ? `[${escapeMd(v.title)}](${youtubeLink(v.id, v.linkSeconds)})`
       : escapeMd(v.title);
     const header = `**${i + 1}.** ${title} — \`${v.date ?? "?"}\`${loose} — ${counts}`;
-    const snip = v.snippet ? `\n> ${escapeMd(clip(v.snippet, MAX_SNIPPET))}` : "";
+    const snip = v.snippet
+      ? `\n> ${highlight(escapeMd(clip(v.snippet, MAX_SNIPPET)), v.terms)}`
+      : "";
     return header + snip;
   });
 

@@ -27,6 +27,9 @@ test("header in content, one embed, top result's thumbnail, exact ranked first",
   assert.match(d, /\*\*4\.\*\* \[The end of this video is a disaster\][^\n]*loose match/);
   // Titles deep-link to the matched moment.
   assert.match(d, /youtube\.com\/watch\?v=[\w-]+&t=\d+s/);
+  // Matched words are bolded in the caption; the fuzzy video bolds its loose terms.
+  assert.match(d, /\*\*motor\*\* \*\*running\*\*/);
+  assert.match(d, /\*\*motorcycle\*\*/);
 });
 
 test("a configured custom emoji is prepended to the header", () => {
