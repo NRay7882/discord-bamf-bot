@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>astrogoblin video search</title>
+  <meta property="og:title" content="astrogoblin video search">
+  <meta property="og:description" content="Search the spoken content of every Astrogoblin video — matches link straight to the moment in the video where the words were said.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://search.astrogoblin.jammaloo.com/">
+  <meta property="og:site_name" content="Astrogoblin">
+  <meta property="og:image" content="https://search.astrogoblin.jammaloo.com/logo-og.png">
+  <meta property="og:image:alt" content="Astrogoblin logo">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="1200">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="astrogoblin video search">
+  <meta name="twitter:description" content="Search the spoken content of every Astrogoblin video — matches link straight to the moment where the words were said.">
+  <meta name="twitter:image" content="https://search.astrogoblin.jammaloo.com/logo-og.png">
+  <meta name="twitter:image:alt" content="Astrogoblin logo">
+  <style>
+    :root {
+      --bg: #0f1117; --panel: #171a23; --panel-2: #1f2330; --border: #2a2f3d;
+      --text: #e6e8ee; --muted: #8b93a7; --accent: #ff3b3b; --accent-2: #ff7878;
+      --mark-bg: #f5d061; --mark-text: #1a1a1a; --link: #6cb6ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    header.top { border-bottom: 1px solid var(--border); padding: 22px 24px; background: linear-gradient(180deg, #161922, var(--bg)); }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+header.top .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+header.top .brand .logo { width: 44px; height: 44px; flex: 0 0 auto; display: block; border-radius: 9px; }
+header.top h1 { margin: 0; font-size: 1.45rem; letter-spacing: -0.01em; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    .meta b { color: var(--text); font-weight: 600; }
+    .search { padding: 30px 0 8px; }
+    form.s { display: flex; gap: 10px; }
+    form.s input { flex: 1; padding: 13px 15px; font-size: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+    form.s input:focus { outline: none; border-color: var(--accent-2); }
+    form.s button { padding: 13px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; border-radius: 10px; background: var(--accent); color: #fff; }
+    form.s button:hover { background: var(--accent-2); }
+    .hint { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+    .result-summary { color: var(--muted); font-size: 0.95rem; margin: 22px 0 4px; }
+    .result-summary b { color: var(--text); }
+    .video { margin: 22px 0; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); overflow: hidden; }
+    .video-head { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--panel-2); border-bottom: 1px solid var(--border); }
+    .video-head .thumb { flex: 0 0 auto; width: 120px; height: 68px; border-radius: 7px; overflow: hidden; background: #000; }
+    .video-head .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-head .thumb.no-thumb { visibility: hidden; }
+    .video-head .head-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+    .video-head .title { font-weight: 600; }
+    .video-head .title a { color: var(--text); text-decoration: none; }
+    .video-head .title a:hover { color: var(--link); }
+    .video-head .info { color: var(--muted); font-size: 0.82rem; }
+    .match { padding: 12px 16px; border-top: 1px solid var(--border); display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
+    .match:first-of-type { border-top: none; }
+    .ts a { display: inline-block; min-width: 64px; text-align: center; padding: 5px 10px; border-radius: 7px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+    .ts a:hover { background: var(--accent-2); }
+    .snip { color: #cdd2de; }
+    mark { background: var(--mark-bg); color: var(--mark-text); border-radius: 3px; padding: 0 2px; }
+    .empty, .error { color: var(--muted); padding: 40px 0; text-align: center; }
+    .error { color: var(--accent-2); }
+    footer { color: var(--muted); font-size: 0.8rem; text-align: center; padding: 40px 0 30px; }
+    @media (max-width: 560px) { .match { grid-template-columns: 1fr; } .video-head .thumb { width: 96px; height: 54px; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <img src="logo.png" alt="" width="44" height="44" class="logo">
+        <h1>astrogoblin video search</h1>
+      </div>
+      <div class="meta">
+        <b>268</b> of 268 videos indexed
+        · 0 pending · last indexed: <b>Wow, this show sucks!</b>      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="search">
+      <form class="s" method="get" action="">
+        <input type="text" name="q" value="motor running" placeholder="Search spoken words across every video…" autofocus autocomplete="off">
+        <button type="submit">Search</button>
+      </form>
+      <div class="hint">Matches link straight to the moment in the video where it was said.</div>
+    </section>
+
+      <div class="result-summary"><b>10</b> match(es) in <b>4</b> video(s) for “motor running”</div>
+      <article class="video">
+        <div class="video-head">
+          <a class="thumb" href="https://www.youtube.com/watch?v=5dGOyUBqUqY" target="_blank" rel="noopener">
+            <img src="https://i.ytimg.com/vi/5dGOyUBqUqY/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.thumb').classList.add('no-thumb')">
+          </a>
+          <div class="head-text">
+            <span class="title"><a href="https://www.youtube.com/watch?v=5dGOyUBqUqY" target="_blank" rel="noopener">Wow, this show sucks!</a></span>
+            <span class="info">2026-09-04 · 2 match(es)</span>
+          </div>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=5dGOyUBqUqY&amp;t=618s" target="_blank" rel="noopener">10:18</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark> with bill van dyke…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=5dGOyUBqUqY&amp;t=620s" target="_blank" rel="noopener">10:20</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+      </article>
+      <article class="video">
+        <div class="video-head">
+          <a class="thumb" href="https://www.youtube.com/watch?v=ttqO7kcFsGI" target="_blank" rel="noopener">
+            <img src="https://i.ytimg.com/vi/ttqO7kcFsGI/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.thumb').classList.add('no-thumb')">
+          </a>
+          <div class="head-text">
+            <span class="title"><a href="https://www.youtube.com/watch?v=ttqO7kcFsGI" target="_blank" rel="noopener">Charlotte&#039;s only good impression</a></span>
+            <span class="info">2026-07-27 · 1 match(es)</span>
+          </div>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=ttqO7kcFsGI&amp;t=124s" target="_blank" rel="noopener">2:04</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark> get your…</span>
+        </div>
+      </article>
+      <article class="video">
+        <div class="video-head">
+          <a class="thumb" href="https://www.youtube.com/watch?v=PDaj__93f8Q" target="_blank" rel="noopener">
+            <img src="https://i.ytimg.com/vi/PDaj__93f8Q/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.thumb').classList.add('no-thumb')">
+          </a>
+          <div class="head-text">
+            <span class="title"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q" target="_blank" rel="noopener">How to break into a 2nd story bedroom</a></span>
+            <span class="info">2025-01-20 · 6 match(es)</span>
+          </div>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=786s" target="_blank" rel="noopener">13:06</a></span>
+          <span class="snip">…you probably want to get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=788s" target="_blank" rel="noopener">13:08</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=789s" target="_blank" rel="noopener">13:09</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=791s" target="_blank" rel="noopener">13:11</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=793s" target="_blank" rel="noopener">13:13</a></span>
+          <span class="snip">…we re going to get phil s <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=PDaj__93f8Q&amp;t=946s" target="_blank" rel="noopener">15:46</a></span>
+          <span class="snip">…get your <mark>motor</mark> <mark>running</mark>…</span>
+        </div>
+      </article>
+      <article class="video">
+        <div class="video-head">
+          <a class="thumb" href="https://www.youtube.com/watch?v=v2-OauzBS2c" target="_blank" rel="noopener">
+            <img src="https://i.ytimg.com/vi/v2-OauzBS2c/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.thumb').classList.add('no-thumb')">
+          </a>
+          <div class="head-text">
+            <span class="title"><a href="https://www.youtube.com/watch?v=v2-OauzBS2c" target="_blank" rel="noopener">The end of this video is a disaster</a></span>
+            <span class="info">2024-12-30 · 1 match(es)</span>
+          </div>
+        </div>
+        <div class="match">
+          <span class="ts"><a href="https://www.youtube.com/watch?v=v2-OauzBS2c&amp;t=296s" target="_blank" rel="noopener">4:56</a></span>
+          <span class="snip">…i see jacob riding that <mark>motorcycle</mark> down the <mark>runway</mark>…</span>
+        </div>
+      </article>
+
+    <footer>Searches every indexed transcript. New videos are picked up daily.</footer>
+  </main>
+</body>
+</html>
