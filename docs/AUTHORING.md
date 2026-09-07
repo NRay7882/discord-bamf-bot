@@ -134,26 +134,37 @@ At runtime your module receives:
 
 ## 6. Who can run a command
 
-Set `defaultMemberPermissions` in the manifest to restrict a command:
-
-| Value | Meaning |
-|-------|---------|
-| `null` | Anyone can run it (default). |
-| array of permission names | Only members with those guild permissions, e.g. `["ManageGuild"]`. |
-| numeric bitfield string | Same, expressed as a raw Discord permission integer. |
+Add an `access` block to a command (or an individual subcommand) to restrict it.
+Leave it off and the command is open to everyone (the default). The core enforces
+it before your module is called, so you never re-check it.
 
 ```json
-{ "name": "purge", "description": "Admin only", "defaultMemberPermissions": ["ManageMessages"] }
+{ "name": "purge", "description": "Clear messages",
+  "access": { "permissions": ["ManageMessages"], "roles": ["Moderator"] } }
 ```
 
-> **Heads up:** every command is rolled up under a single `/bamf` command, and
-> Discord only applies `defaultMemberPermissions` to a top-level command. So this
-> field drives `/bamf help` and the docs, but it no longer gates an individual
-> `/bamf <command>` at the Discord level. If a command must be restricted, check
-> the caller's permissions inside your handler (in-process modules have the live
-> interaction; see thread-directory's Manage-Server check). HTTP modules receive
-> the invoker in the `/invoke` request but cannot see their guild permissions, so
-> a hard restriction needs an in-process module.
+| Field | Meaning |
+|-------|---------|
+| `permissions` | Discord permission names (from `PermissionFlagsBits`). `["Administrator"]` is admin-only; admins satisfy any permission automatically. |
+| `roles` | Role **names**, matched case-insensitively. Portable, but names are mutable - an operator can override with role IDs per guild in `bamf.local.json`. |
+
+A caller passes if they have **any** listed permission **or** an allowed role.
+A command's `access` is a floor; a subcommand's `access` narrows it further (both
+must pass), so to gate just one subcommand, leave the command open and add
+`access` to that subcommand.
+
+> **Heads up:** because every command is a subcommand of `/bamf`, Discord's own
+> per-command permission setting doesn't apply - a gated command still shows in
+> everyone's picker and is refused on use, with a clear message. That's the
+> trade-off for the single-command rollup.
+
+### Server-specific modules
+
+A module for one community sets `"scope": { "restricted": true }` at the top of
+its manifest - and nothing else. Never put guild IDs or names in the committed
+manifest (the core rejects them); the operator supplies the allowlist privately
+via `BAMF_SCOPE_<MODULE>` in `.env` or `bamf.local.json`. The core then registers
+the module only in the allowed servers, so it's hidden everywhere else.
 
 ---
 
@@ -227,5 +238,6 @@ call per command and validates the shape of what comes back.
 | Show a rich card | return `embeds: [ ... ]` |
 | Ping a user | `allowedMentions: { "users": ["<id>"] }` |
 | Take user input | add `options: [ ... ]` (manifest) |
-| Limit who can run it | `defaultMemberPermissions` (manifest) |
+| Limit who can run it | `access` block (manifest, section 6) |
+| Limit it to one server | `scope: { restricted: true }` + operator config (section 6) |
 | Prove it works | `npm test <module>` + a `tests.json` |

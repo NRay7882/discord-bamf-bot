@@ -10,6 +10,10 @@ data/
 .env.*
 !.env.example
 
+# Operator override for module scoping / access. Holds server-specific guild and
+# role IDs, so it is never committed. Only bamf.local.example.json is tracked.
+bamf.local.json
+
 # private testing notes.
 extras/
 

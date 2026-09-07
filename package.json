@@ -14,7 +14,7 @@
     "docs:check": "node scripts/generate-docs.js --check",
     "test": "node scripts/test-module.js",
     "test:module": "node scripts/test-module.js",
-    "test:unit": "node --test \"modules/**/*.test.js\"",
+    "test:unit": "node --test \"modules/**/*.test.js\" \"src/**/*.test.js\"",
     "avatar": "node scripts/set-avatar.js",
     "module:hello": "node modules/hello-world/index.js"
   },

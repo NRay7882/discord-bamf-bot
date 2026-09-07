@@ -14,6 +14,8 @@ import { loadInProcessModules } from "./inprocess.js";
 import { resolvePrivileges } from "./permissions.js";
 import { handleCommand } from "./router.js";
 import { handleHelp, HELP_SUBCOMMAND_NAME } from "./help.js";
+import { reconcileAllGuilds, reconcileOneGuild } from "./registrar.js";
+import { checkGuards } from "./guard.js";
 import { installGlobalGuards, safeRespond, GENERIC_ERROR_MESSAGE } from "./errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -45,6 +47,24 @@ async function main() {
       config,
       dataDir: DATA_DIR,
     });
+    // Install per-guild overlays so restricted modules appear only where allowed.
+    await reconcileAllGuilds(client, commandMap, DATA_DIR).catch((error) =>
+      log.error("Guild reconciliation failed", { error: error.message })
+    );
+  });
+
+  // A new server (or a rename that may change name-matching) can change which
+  // restricted modules apply there, so re-reconcile just that guild.
+  client.on(Events.GuildCreate, (guild) => {
+    reconcileOneGuild(guild, commandMap, DATA_DIR).catch((error) =>
+      log.error("GuildCreate reconciliation failed", { guildId: guild.id, error: error.message })
+    );
+  });
+  client.on(Events.GuildUpdate, (oldGuild, newGuild) => {
+    if (oldGuild.name === newGuild.name) return;
+    reconcileOneGuild(newGuild, commandMap, DATA_DIR).catch((error) =>
+      log.error("GuildUpdate reconciliation failed", { guildId: newGuild.id, error: error.message })
+    );
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -63,6 +83,17 @@ async function main() {
         await handleHelp(interaction, commandMap);
         return;
       }
+      // Scope + access gates, enforced centrally so no module hand-rolls them.
+      const entry = commandMap.get(commandName);
+      if (entry) {
+        const subName = group ? leaf : null;
+        const verdict = checkGuards(interaction, entry, subName);
+        if (!verdict.allowed) {
+          await safeRespond(interaction, verdict.message);
+          return;
+        }
+      }
+
       const inProcess = inProcessCommands.get(commandName);
       if (inProcess) {
         await inProcess(interaction);

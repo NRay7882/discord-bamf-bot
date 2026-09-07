@@ -3,7 +3,17 @@
 // not by any module. Exposed as `/bamf help`, alongside every module command.
 
 import { MessageFlags } from "discord.js";
-import { ROOT_COMMAND_NAME } from "./registry.js";
+import { ROOT_COMMAND_NAME, isModuleAllowedInGuild } from "./registry.js";
+import { buildRequirement, describeRequirement } from "./access.js";
+
+/** A short "(needs ...)" note for a command/subcommand's declared access, or "". */
+function accessNote(access) {
+  const req = buildRequirement({
+    permissions: access?.permissions ?? [],
+    roles: access?.roles ?? [],
+  });
+  return req ? ` _(needs ${describeRequirement(req)})_` : "";
+}
 
 export const HELP_SUBCOMMAND_NAME = "help";
 
@@ -55,12 +65,14 @@ function renderList(commandMap) {
   for (const [name, { command }] of entries) {
     const subs = subcommandsOf(command);
     if (subs) {
-      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}`);
+      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}${accessNote(command.access)}`);
       for (const sub of subs) {
-        lines.push(`  - \`/${ROOT_COMMAND_NAME} ${name} ${sub.name}\` - ${sub.description}`);
+        lines.push(
+          `  - \`/${ROOT_COMMAND_NAME} ${name} ${sub.name}\` - ${sub.description}${accessNote(sub.access)}`
+        );
       }
     } else {
-      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}`);
+      lines.push(`- \`/${ROOT_COMMAND_NAME} ${name}\` - ${command.description}${accessNote(command.access)}`);
     }
   }
   lines.push("", `Use \`/${ROOT_COMMAND_NAME} help command:<name>\` for details on one command.`);
@@ -76,6 +88,11 @@ function renderDetail(entry) {
     `Module: \`${module.name}\` v${module.version}`,
     `Reply: ${command.ephemeral ? "private (only you see it)" : "public (posted in channel)"}`,
   ];
+  const cmdReq = buildRequirement({
+    permissions: command.access?.permissions ?? [],
+    roles: command.access?.roles ?? [],
+  });
+  if (cmdReq) lines.push(`Access: ${describeRequirement(cmdReq)}`);
 
   const subs = subcommandsOf(command);
   if (subs) {
@@ -85,7 +102,7 @@ function renderDetail(entry) {
       const usage = args
         ? `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name} ${args}`
         : `/${ROOT_COMMAND_NAME} ${command.name} ${sub.name}`;
-      lines.push(`- \`${usage}\` - ${sub.description}`);
+      lines.push(`- \`${usage}\` - ${sub.description}${accessNote(sub.access)}`);
     }
     return lines.join("\n");
   }
@@ -108,6 +125,14 @@ function renderDetail(entry) {
  * @param {Map<string, {module: object, command: object}>} commandMap
  */
 export async function handleHelp(interaction, commandMap) {
+  // Only list what's actually available in this server (restricted modules that
+  // aren't allowed here are omitted entirely).
+  const ctx = { guildId: interaction.guildId, guildName: interaction.guild?.name };
+  const visible = new Map();
+  for (const [name, entry] of commandMap) {
+    if (isModuleAllowedInGuild(entry.module, ctx)) visible.set(name, entry);
+  }
+
   const requested = interaction.options.getString("command");
   let content;
 
@@ -118,14 +143,14 @@ export async function handleHelp(interaction, commandMap) {
       .replace(new RegExp(`^${ROOT_COMMAND_NAME}\\s+`), "")
       .trim()
       .split(/\s+/)[0];
-    const entry = commandMap.get(key);
+    const entry = visible.get(key);
     content = entry
       ? renderDetail(entry)
       : `No command named \`/${ROOT_COMMAND_NAME} ${key}\`. Run \`/${ROOT_COMMAND_NAME} help\` to see everything available.`;
-  } else if (commandMap.size === 0) {
+  } else if (visible.size === 0) {
     content = "No commands are available yet.";
   } else {
-    content = renderList(commandMap);
+    content = renderList(visible);
   }
 
   await interaction.reply({
