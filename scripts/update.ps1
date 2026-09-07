@@ -13,8 +13,10 @@
 #   3. Look at exactly which files changed between the old and new HEAD and:
 #        - run `npm install`         only if the root lockfile changed
 #        - re-deploy slash commands  only if a module manifest changed
-#        - `pm2 restart all`         only if runtime code changed (docs-only
-#                                    updates do not trigger a restart)
+#        - `pm2 startOrRestart`      only if runtime code changed (docs-only
+#          ecosystem.config.cjs      updates do not trigger a restart). This both
+#                                    restarts running processes and launches any
+#                                    newly-added ones (e.g. a new HTTP module).
 #
 # Requires: git and pm2 on PATH. The deploy step reads secrets from the local
 # .env file (see src/config.js) - no external tooling needed.
@@ -121,9 +123,12 @@ if ($manifestChanged -and -not $NoDeploy) {
 Write-Host "`n[4/4] Restart..." -ForegroundColor Cyan
 
 if ($needRestart) {
-  pm2 restart all --update-env
+  # startOrRestart applies the ecosystem file: it restarts processes that are
+  # already running AND launches any newly-added ones (e.g. a new HTTP module's
+  # process), so a new module doesn't need a manual `pm2 start`.
+  pm2 startOrRestart ecosystem.config.cjs --update-env
   if ($LASTEXITCODE -ne 0) {
-    Fail "pm2 restart failed. Is the process list running? Try: pm2 start ecosystem.config.cjs"
+    Fail "pm2 startOrRestart failed. Is pm2 installed and on PATH? Try: pm2 start ecosystem.config.cjs"
   }
   pm2 save | Out-Null
   Write-Host "`nUpdated to $after and restarted." -ForegroundColor Green
