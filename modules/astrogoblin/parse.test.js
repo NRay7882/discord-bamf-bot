@@ -24,6 +24,10 @@ test("parses summary, videos, ids, dates, and matches", () => {
   assert.equal(first.matches[0].label, "10:18");
   assert.match(first.matches[0].snippet, /motor running/);
   assert.doesNotMatch(first.matches[0].snippet, /<mark>|…/); // tags + ellipses stripped
+  assert.deepEqual(
+    first.matches[0].terms.map((t) => t.toLowerCase()),
+    ["motor", "running"]
+  );
 });
 
 test("decodes HTML entities in titles", () => {

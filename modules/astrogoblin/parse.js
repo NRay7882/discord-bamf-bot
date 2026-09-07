@@ -76,10 +76,17 @@ function parseVideo(block) {
     const secM = mb.match(/[?&](?:amp;)?t=(\d+)s/);
     const labelM = mb.match(/<span class="ts">[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/);
     const snipM = mb.match(/<span class="snip">([\s\S]*?)<\/span>/);
+    const snipHtml = snipM ? snipM[1] : "";
+    // The site wraps the matched words in <mark>; capture them so the reply can
+    // highlight them, and keep the plain snippet for phrase classification.
+    const terms = [...snipHtml.matchAll(/<mark>([\s\S]*?)<\/mark>/g)]
+      .map((x) => textOf(x[1]))
+      .filter(Boolean);
     matches.push({
       seconds: secM ? Number(secM[1]) : null,
       label: labelM ? textOf(labelM[1]) : null,
-      snippet: snipM ? cleanSnippet(snipM[1]) : "",
+      snippet: cleanSnippet(snipHtml),
+      terms,
     });
   }
 
@@ -96,7 +103,8 @@ function parseVideo(block) {
  * Parse a jammaloo results page.
  * @returns {{ query: string|null, totalMatches: number, totalVideos: number,
  *   videos: Array<{ id: string|null, title: string, url: string, date: string|null,
- *     matches: Array<{ seconds: number|null, label: string|null, snippet: string }> }> }}
+ *     matches: Array<{ seconds: number|null, label: string|null, snippet: string,
+ *       terms: string[] }> }> }}
  */
 export function parseResults(html) {
   const summary = extractSummary(html);
