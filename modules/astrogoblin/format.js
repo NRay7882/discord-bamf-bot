@@ -89,7 +89,10 @@ function thumbnailUrl(id) {
 export function buildResponse(results, { titleEmoji = "" } = {}) {
   const query = results.query ?? "";
   const url = searchUrl(query);
-  const heading = `${titleEmoji ? `${titleEmoji} ` : ""}**Astrogoblin YT Video Search**`;
+  // A custom emoji only renders on servers the bot is a member of; with none
+  // configured, fall back to a unicode magnifying glass, which renders anywhere.
+  const emoji = titleEmoji || "🔍";
+  const heading = `${emoji} **Astrogoblin YT Video Search**`;
 
   if (!results.videos.length) {
     return {

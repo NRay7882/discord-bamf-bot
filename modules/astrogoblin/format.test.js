@@ -15,7 +15,7 @@ test("searchUrl uses + for spaces, like the site", () => {
 
 test("header in content, one embed, top result's thumbnail, exact ranked first", () => {
   const out = buildResponse(parseResults(fixture("motor-running.html")));
-  assert.match(out.content, /\*\*Astrogoblin YT Video Search\*\*/);
+  assert.match(out.content, /^🔍 \*\*Astrogoblin YT Video Search\*\*/); // default emoji
   assert.equal(out.embeds.length, 1);
 
   const embed = out.embeds[0];
