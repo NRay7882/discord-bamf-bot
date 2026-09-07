@@ -58,6 +58,22 @@ export const config = {
   sharedSecret: optional("BAMF_SHARED_SECRET", null),
   logLevel: optional("LOG_LEVEL", "info"),
   modulesDir: optional("BAMF_MODULES_DIR", null), // resolved by registry if null
+
+  // Which environment this instance is: "prod" (default) or "dev". Purely
+  // informational for the core (it drives the PM2 name prefix / port offset in
+  // ecosystem.config.cjs); handy in logs when prod and dev run on one host.
+  env: optional("BAMF_ENV", "prod"),
+
+  // How the core reaches HTTP modules. By default it uses each module's manifest
+  // invokeUrl verbatim. These two overrides let a second (dev) stack run beside
+  // prod on the same machine, or a containerized stack address modules by name:
+  //   BAMF_MODULE_HOST        - replace the module host (e.g. a Docker service).
+  //   BAMF_MODULE_PORT_OFFSET - add to each module port, so dev (offset 1000)
+  //                             talks to its own modules on 9081/9082 instead of
+  //                             prod's 8081/8082. Modules pick up the shifted
+  //                             port from PORT (set per-env in ecosystem.config).
+  moduleHost: optional("BAMF_MODULE_HOST", null),
+  modulePortOffset: Number(optional("BAMF_MODULE_PORT_OFFSET", "0")) || 0,
 };
 
 // --- Operator overrides (never committed) -----------------------------------

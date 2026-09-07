@@ -1,11 +1,14 @@
 # update.ps1 - pull the latest BamfBot, then reload only what actually changed.
 #
-# Run it from an RDP session on the host whenever you want to take an update:
+# Run it from an RDP session on the host whenever you want to take an update.
+# Run it from THIS environment's working copy (prod copy for prod, dev copy for
+# dev); -Env picks the PM2 process set and the default command-deploy scope:
 #
-#   .\scripts\update.ps1            # pull, then restart/redeploy only if needed
-#   .\scripts\update.ps1 -Global    # if commands changed, deploy them globally
-#   .\scripts\update.ps1 -NoDeploy  # never touch Discord command registration
-#   .\scripts\update.ps1 -Force     # restart even if nothing changed
+#   .\scripts\update.ps1             # update PROD (deploys commands globally)
+#   .\scripts\update.ps1 -Env dev    # update DEV  (deploys commands guild-scoped)
+#   .\scripts\update.ps1 -Env dev -Global   # dev, but deploy globally anyway
+#   .\scripts\update.ps1 -NoDeploy   # never touch Discord command registration
+#   .\scripts\update.ps1 -Force      # restart even if nothing changed
 #
 # What it does, in order:
 #   1. git pull (fast-forward only - aborts if the local tree has diverged).
@@ -18,12 +21,18 @@
 #                                    restarts running processes and launches any
 #                                    newly-added ones (e.g. a new HTTP module).
 #
+# BAMF_ENV is exported for this run so the ecosystem file targets the right
+# process set (bamf-* for prod, bamf-dev-* for dev) with the right port offset.
+#
 # Requires: git and pm2 on PATH. The deploy step reads secrets from the local
 # .env file (see src/config.js) - no external tooling needed.
 
 [CmdletBinding()]
 param(
-  [switch]$Global,    # deploy commands globally instead of guild-scoped
+  [Alias('Env')]
+  [ValidateSet('prod', 'dev')]
+  [string]$Environment = 'prod',  # which environment (and process set) to update
+  [switch]$Global,    # force a global command deploy (prod already deploys global)
   [switch]$NoDeploy,  # skip command deployment even if manifests changed
   [switch]$Force      # restart even when nothing changed
 )
@@ -33,6 +42,11 @@ $ErrorActionPreference = "Stop"
 # Always operate from the repo root (this script lives in scripts/).
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
+
+# Target this environment's PM2 process set + module port offset, and pick the
+# default command-deploy scope: prod is global (every server), dev is guild.
+$env:BAMF_ENV = $Environment
+$deployGlobal = $Global.IsPresent -or ($Environment -eq 'prod')
 
 function Fail($message) {
   Write-Host "  ERROR: $message" -ForegroundColor Red
@@ -45,7 +59,7 @@ function Require-Command($name, $hint) {
   }
 }
 
-Write-Host "BamfBot update - $repoRoot" -ForegroundColor Cyan
+Write-Host "BamfBot update [$Environment] - $repoRoot" -ForegroundColor Cyan
 
 Require-Command git  "Install Git and reopen the shell."
 Require-Command pm2  "Install it with: npm install -g pm2"
@@ -105,9 +119,9 @@ if ($moduleDeps) {
 
 # Command (re)deployment - only when a manifest changed.
 if ($manifestChanged -and -not $NoDeploy) {
-  $scope = if ($Global) { "global" } else { "guild-scoped" }
+  $scope = if ($deployGlobal) { "global" } else { "guild-scoped" }
   Write-Host "        manifest changed -> deploying slash commands ($scope)"
-  if ($Global) {
+  if ($deployGlobal) {
     npm run deploy:global
   } else {
     npm run deploy
