@@ -18,11 +18,17 @@ allows (see below), not in every server the bot is in.
 - `query` (required) - words that were said, e.g. `motor running`.
 - The reply is **ephemeral** (only the person who searched sees it).
 
-It returns an embed: an overall count, a link to the full jammaloo results, and
-the top videos ranked by relevance - each with the video title (deep-linked to
-the matched moment on YouTube), posted date, match count (and how many are exact),
-and the first matching caption. Videos with the exact phrase rank above ones that
-only matched loosely (those are flagged `loose match`).
+The reply is a titled message (`Astrogoblin YT Video Search`) plus an embed: an
+overall count, a link to the full jammaloo results, and the top videos ranked by
+relevance - each with the video title (deep-linked to the matched moment on
+YouTube), posted date, match count (and how many are exact), and the first
+matching caption. Videos with the exact phrase rank above ones that only matched
+loosely (those are flagged `loose match`). The **top result's** YouTube thumbnail
+is shown on the embed (an embed has a single image slot).
+
+The title can carry a custom server emoji via `ASTROGOBLIN_TITLE_EMOJI` (see
+Configuration) - it's shown in the message content, because Discord doesn't render
+custom emoji in embed titles.
 
 ## How it works
 
@@ -62,10 +68,14 @@ only in that server. See `MODULE_SPEC.md` sections 6-7.
 
 ## Configuration
 
+The module reads the repo-root `.env` (like the core), so operator config below
+can live there.
+
 | Env var | Default | Meaning |
 |---------|---------|---------|
 | `PORT` | `8082` | Port the module listens on. |
 | `ASTROGOBLIN_TIMEOUT_MS` | `6000` | Timeout for the request to the search site. |
+| `ASTROGOBLIN_TITLE_EMOJI` | (none) | Custom emoji for the reply title, as its full token `<:name:id>`. Server-specific; the bot must be a member of the emoji's server for it to render. Get the token by typing `\:goblin:` in Discord and sending. |
 
 ## Notes
 

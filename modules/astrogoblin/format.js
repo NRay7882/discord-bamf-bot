@@ -69,17 +69,31 @@ function escapeMd(s) {
   return String(s ?? "").replace(/([\\`*_~|>[\]])/g, "\\$1");
 }
 
+// YouTube's thumbnail CDN. hqdefault is always available for a public video.
+function thumbnailUrl(id) {
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+}
+
 /**
  * Build the /invoke response payload for a parsed results set.
+ *
+ * The titled header lives in the message content (not the embed title) so a
+ * custom server emoji can render there - Discord doesn't render custom emoji in
+ * embed titles. The results are one embed whose single image slot shows the top
+ * result's thumbnail; the rest are plain links in the list.
+ *
  * @param {ReturnType<import("./parse.js").parseResults>} results
+ * @param {{ titleEmoji?: string }} [options] titleEmoji is a full custom-emoji
+ *   token like "<:goblin:123...>" (or a unicode emoji), prepended to the header.
  */
-export function buildResponse(results) {
+export function buildResponse(results, { titleEmoji = "" } = {}) {
   const query = results.query ?? "";
   const url = searchUrl(query);
+  const heading = `${titleEmoji ? `${titleEmoji} ` : ""}**Astrogoblin YT Video Search**`;
 
   if (!results.videos.length) {
     return {
-      content: `No Astrogoblin videos found for **${clip(query, 100)}**. [Try it on the search site ↗](${url})`,
+      content: `${heading}\nNo videos found for **${escapeMd(clip(query, 100))}**. [Try it on the search site ↗](${url})`,
       ephemeral: true,
       allowedMentions: { parse: [] },
     };
@@ -104,6 +118,7 @@ export function buildResponse(results) {
   const totalPlural = results.totalMatches === 1 ? "" : "es";
   const vidPlural = results.totalVideos === 1 ? "" : "s";
   let description =
+    `Results for **"${escapeMd(clip(query, 150))}"** — ` +
     `**${results.totalMatches}** match${totalPlural} in **${results.totalVideos}** video${vidPlural} · ` +
     `[full results ↗](${url})\n\n` +
     lines.join("\n");
@@ -112,16 +127,18 @@ export function buildResponse(results) {
     description += `\n\n…and ${ranked.length - shown.length} more — [see all ↗](${url})`;
   }
 
+  const embed = {
+    description: clip(description, 4000),
+    color: EMBED_COLOR,
+    footer: { text: "search.astrogoblin.jammaloo.com" },
+  };
+  // Only the top result gets a thumbnail (an embed has just one image slot).
+  const top = shown[0];
+  if (top?.id) embed.thumbnail = { url: thumbnailUrl(top.id) };
+
   return {
-    embeds: [
-      {
-        title: clip(`🔎 Astrogoblin search: "${query}"`, 256),
-        url,
-        description: clip(description, 4000),
-        color: EMBED_COLOR,
-        footer: { text: "search.astrogoblin.jammaloo.com" },
-      },
-    ],
+    content: heading,
+    embeds: [embed],
     ephemeral: true,
     allowedMentions: { parse: [] },
   };

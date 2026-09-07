@@ -16,11 +16,23 @@ import { dirname, join } from "node:path";
 import { parseResults } from "./parse.js";
 import { buildResponse, searchUrl } from "./format.js";
 
+// Load the repo-root .env (best effort) so operator config like a custom title
+// emoji can live there, out of the committed repo. Values already in the
+// environment (e.g. PORT from PM2) take precedence.
+try {
+  process.loadEnvFile();
+} catch {
+  // No .env here (e.g. the test harness runs from the module dir) - that's fine.
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8082);
 const SHARED_SECRET = process.env.BAMF_SHARED_SECRET ?? null;
 // Keep this under the core's module timeout (default 8000ms) so we fail cleanly.
 const FETCH_TIMEOUT_MS = Number(process.env.ASTROGOBLIN_TIMEOUT_MS ?? 6000);
+// Optional custom emoji for the reply title, as its full token "<:goblin:ID>"
+// (server-specific; never committed). The bot must be in the emoji's server.
+const TITLE_EMOJI = (process.env.ASTROGOBLIN_TITLE_EMOJI ?? "").trim();
 const MAX_QUERY = 200;
 
 const manifest = JSON.parse(await readFile(join(__dirname, "manifest.json"), "utf8"));
@@ -66,7 +78,7 @@ async function invoke(request) {
 
   const results = parseResults(html);
   if (!results.query) results.query = query; // fall back to the user's query
-  return buildResponse(results);
+  return buildResponse(results, { titleEmoji: TITLE_EMOJI });
 }
 // -----------------------------------------------------------------------------
 
