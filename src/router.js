@@ -7,10 +7,11 @@ import { MessageFlags } from "discord.js";
 import { config } from "./config.js";
 import { log } from "./logger.js";
 import { sanitizeInvokeResponse } from "./contract.js";
+import { resolveInvokeBaseUrl } from "./module-url.js";
 import { safeRespond, UNAVAILABLE_MESSAGE, GENERIC_ERROR_MESSAGE } from "./errors.js";
 
 async function callModule(module, requestPayload, requestId) {
-  const url = module.runtime.invokeUrl.replace(/\/$/, "") + "/invoke";
+  const url = resolveInvokeBaseUrl(module.runtime.invokeUrl) + "/invoke";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.moduleTimeoutMs);
 
