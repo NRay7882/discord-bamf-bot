@@ -13,19 +13,27 @@ test("searchUrl uses + for spaces, like the site", () => {
   assert.equal(searchUrl("motor running"), "https://search.astrogoblin.jammaloo.com/?q=motor+running");
 });
 
-test("builds an embed, exact videos ranked above the loose one", () => {
+test("header in content, one embed, top result's thumbnail, exact ranked first", () => {
   const out = buildResponse(parseResults(fixture("motor-running.html")));
-  assert.ok(out.embeds && out.embeds.length === 1);
-  const embed = out.embeds[0];
-  assert.equal(embed.url, "https://search.astrogoblin.jammaloo.com/?q=motor+running");
+  assert.match(out.content, /\*\*Astrogoblin YT Video Search\*\*/);
+  assert.equal(out.embeds.length, 1);
 
+  const embed = out.embeds[0];
   const d = embed.description;
-  // First result is an exact-match video.
-  assert.match(d, /\*\*1\.\*\*[^\n]*\(\d+ exact\)/);
+  // First result is an exact-match video; the top result supplies the thumbnail.
+  assert.match(d, /\*\*1\.\*\* \[How to break into a 2nd story bedroom\][^\n]*\(6 exact\)/);
+  assert.equal(embed.thumbnail.url, "https://i.ytimg.com/vi/PDaj__93f8Q/hqdefault.jpg");
   // The motorcycle/runway video ranks last and is flagged as a loose match.
   assert.match(d, /\*\*4\.\*\* \[The end of this video is a disaster\][^\n]*loose match/);
   // Titles deep-link to the matched moment.
   assert.match(d, /youtube\.com\/watch\?v=[\w-]+&t=\d+s/);
+});
+
+test("a configured custom emoji is prepended to the header", () => {
+  const out = buildResponse(parseResults(fixture("motor-running.html")), {
+    titleEmoji: "<:goblin:123456789012345678>",
+  });
+  assert.match(out.content, /^<:goblin:123456789012345678> \*\*Astrogoblin YT Video Search\*\*/);
 });
 
 test("classifies exact vs fuzzy from snippet text and orders accordingly", () => {
@@ -53,15 +61,18 @@ test("classifies exact vs fuzzy from snippet text and orders accordingly", () =>
       },
     ],
   };
-  const d = buildResponse(results).embeds[0].description;
+  const out = buildResponse(results);
+  const d = out.embeds[0].description;
   assert.ok(d.indexOf("Exact") < d.indexOf("Loose")); // exact video first
   assert.match(d, /\(2 exact\)/);
   assert.match(d, /Loose[^\n]*loose match/);
+  assert.equal(out.embeds[0].thumbnail.url, "https://i.ytimg.com/vi/B/hqdefault.jpg"); // top = exact
 });
 
 test("empty results return a friendly message with the search link", () => {
   const out = buildResponse(parseResults(fixture("no-results.html")));
   assert.ok(!out.embeds);
-  assert.match(out.content, /No Astrogoblin videos found/);
+  assert.match(out.content, /Astrogoblin YT Video Search/);
+  assert.match(out.content, /No videos found/);
   assert.match(out.content, /q=zzxqvljkwq/);
 });
